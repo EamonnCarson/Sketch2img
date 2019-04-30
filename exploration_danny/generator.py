@@ -41,7 +41,7 @@ class MRU(nn.Module):
         n = torch.cat((x, image), axis=1)
         n = self.conv3(n) 
         n = self.sigmoid2(n)
-        out_1 = self.mm2((1-n), out)
+        out_1 = self.mm2((torch.ones_like(n) - n), out)
         out_2 = self.mm3(n, x)
         out = out_1 + out_2
         if self.interpolate:
