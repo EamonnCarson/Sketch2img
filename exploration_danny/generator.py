@@ -21,28 +21,28 @@ class MRU(nn.Module):
         super(MRU, self).__init__()
         self.conv1 = conv3x3(in_channels, out_channels, stride=stride)
         self.sigmoid1 = nn.sigmoid(inplace=True)
-        self.mm1 = torch.mm()
+        self.mul1 = torch.mul()
         self.activation = activation # activation needs to be in nn.module
         self.conv2 = conv3x3(None, None) # TODO :: fill channels
         self.conv3 = conv3x3(None, None) # TODO :: fill channels
         self.sigmoid2 = nn.sigmoid(inplace=True)
-        self.mm2 = torch.mm()
-        self.mm3 = torch.mm()
+        self.mul2 = torch.mul()
+        self.mul3 = torch.mul()
         self.interpolate = interpolate # output shape used by functional.interpoloate to upsample/downsample
 
     def forward(self, x, image):
         out = torch.cat((x, image), axis=1) # axis=channel_index; 1 if (N,C,H,W)
         out = self.conv1(out)
         out = self.sigmoid1(out) # m
-        out = self.mm1(out, x)
+        out = self.mul1(out, x)
         out = torch.cat((out, image), axis=1)
         out = self.conv2(out)
         out = self.activation(out) # z
         n = torch.cat((x, image), axis=1)
         n = self.conv3(n) 
         n = self.sigmoid2(n)
-        out_1 = self.mm2((torch.ones_like(n) - n), out)
-        out_2 = self.mm3(n, x)
+        out_1 = self.mul2((torch.ones_like(n) - n), out)
+        out_2 = self.mul3(n, x)
         out = out_1 + out_2
         if self.interpolate:
             # TODO :: we can use interpolate to both downsample and upsample 
@@ -86,11 +86,11 @@ class sketchGAN_G(nn.Moduel):
         # out5 = torch.cat((out5, out4), axis=1) 
         # Not sure this is needed. This skip-connection is not shown in figure diagram
         out6 = self.dec_layer2(out5)
-        out6 = torch.cat((out6, out3), axis=1)
+        out6 = torch.cat((out6, out3), axis=1) # skip-connection
         out7 = self.dec_layer3(out6)
-        out7 = torch.cat((out7, out2), axis=1)
+        out7 = torch.cat((out7, out2), axis=1) # skip-connection
         out = self.dec_layer4(out7)
-        out = torch.cat((out, out1), axis=1)
+        out = torch.cat((out, out1), axis=1) # skip-connection
         return out
 
 # model = sketchGAN_G(MRU, layer_dims, sampling_dims).to(device)
