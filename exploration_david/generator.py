@@ -7,18 +7,18 @@ import torchvision.transforms as transforms
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class MRU(nn.Module):
-    def conv3x3(in_channels, out_channels):
+    def conv3x3(in_channels, out_channels, sn):
         """
         Implements 3x3 convolution layer in MRU unit.
         """
-        return nn.Conv2d(
-            in_channels, 
-            out_channels, 
-            kernel_size=3,
-            stride=1, 
-            padding=1,  # Padding of 1 ensures that input size = output size
+        # Padding of 1 ensures that input size = output size
+        conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        torch.nn.init.xavier_uniform(conv.weight)
+        if sn:
+            conv = torch.nn.utils.spectral_norm(conv)
+        return conv
     
-    def __init__(self, in_channels, out_channels, activation, sketch_channels=3):
+    def __init__(self, in_channels, out_channels, activation, image_channels=3, sn=False):
         """
         Initializes a MRU unit for SketchyGAN.
         
@@ -26,18 +26,19 @@ class MRU(nn.Module):
             in_channels: Number of input channels (e.g. 3 for a RGB image)
             out_channels: Number of output channels
             activation: Activation function, f, to use
-            sketch_channels: Number of channels for the input sketch
+            image_channels: Number of channels for the input image
+            sn: Set True to use spectral normalization (mainly for discriminator)
         """
         super(MRU, self).__init__()
-        self.conv_mi = conv3x3(in_channels + sketch_channels, in_channels)
-        self.conv_ni = conv3x3(in_channels + sketch_channels, out_channels)
-        self.conv_zi = conv3x3(in_channels + sketch_channels, out_channels)
-        self.conv_xi = conv3x3(in_channels, out_channels)
+        self.conv_mi = conv3x3(in_channels + image_channels, in_channels, sn)
+        self.conv_ni = conv3x3(in_channels + image_channels, out_channels, sn)
+        self.conv_zi = conv3x3(in_channels + image_channels, out_channels, sn)
+        self.conv_xi = conv3x3(in_channels, out_channels, sn)
         self.f = activation  # activation needs to be in nn.Module
 
     def forward(self, xi, image):
         """
-        Implement forward pass of MRU.
+        Implements forward pass of MRU.
         
         Args:
             xi: Input feature map of size (batch_size, in_channels, height, width)
@@ -55,8 +56,18 @@ class MRU(nn.Module):
         ni = nn.Sigmoid(self.conv_ni(xi_image_concat))
         xi_new = self.conv_xi(xi)
         
-        yi = (1 - ni) * zi + ni * xi_new
+        yi = (1 - ni) * xi_new + ni * zi
         return yi
+
+
+class EncoderBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, activation, image_channels=3):
+        self.mru = MRU(in_channels, out_channels, activation, image_channels)
+        self.pool = nn.Conv2d(out_channels, out_channels, kernel_size=2, stride=2)
+    
+    def forward(self, xi, image):
+        return self.pool(self.mru(xi, image))
+
 
 class sketchGAN_G(nn.Moduel):
     def __init__(self, mru, layer_dims, sampling_dims):
