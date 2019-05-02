@@ -7,29 +7,56 @@ import torchvision.transforms as transforms
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class MRU(nn.Module):
-    def conv3x3(in_channels, out_channels, stride=1, padding=0, bias=True):
+    def conv3x3(in_channels, out_channels):
+        """
+        Implements 3x3 convolution layer in MRU unit.
+        """
         return nn.Conv2d(
             in_channels, 
             out_channels, 
-            kernel_size=3, 
-            stride=stride, 
-            padding=padding,
-            bias=bias)
+            kernel_size=3,
+            stride=1, 
+            padding=1,  # Padding of 1 ensures that input size = output size
     
-    def __init__(self, in_channels, out_channels, activation, stride=1, interpolate=None):
+    def __init__(self, in_channels, out_channels, activation, sketch_channels=3):
+        """
+        Initializes a MRU unit for SketchyGAN.
+        
+        Args:
+            in_channels: Number of input channels (e.g. 3 for a RGB image)
+            out_channels: Number of output channels
+            activation: Activation function, f, to use
+            sketch_channels: Number of channels for the input sketch
+        """
         super(MRU, self).__init__()
-        self.conv1 = conv3x3(in_channels, out_channels, stride=stride)
-        self.conv2 = conv3x3(in_channels, out_channels, stride=stride)
-        self.conv3 = conv3x3(in_channels, out_channels, stride=stride)
-        self.f = activation # activation needs to be in nn.module
-        self.interpolate = interpolate # output shape used by functional.interpolate to upsample/downsample
+        self.conv_mi = conv3x3(in_channels + sketch_channels, in_channels)
+        self.conv_ni = conv3x3(in_channels + sketch_channels, out_channels)
+        self.conv_zi = conv3x3(in_channels + sketch_channels, out_channels)
+        self.conv_xi = conv3x3(in_channels, out_channels)
+        self.f = activation  # activation needs to be in nn.Module
 
     def forward(self, xi, image):
-        xi_image_concat = torch.concat((xi, image), dim=1)
-        mi = nn.Sigmoid(self.conv1(xi_image_concat))
-        zi = self.f(self.conv2(torch.concat((mi * xi, image), dim=1)))
-        ni = nn.Sigmoid(self.conv3(xi_image_concat))
-        yi = (1 - ni) * zi + ni * xi
+        """
+        Implement forward pass of MRU.
+        
+        Args:
+            xi: Input feature map of size (batch_size, in_channels, height, width)
+            image: Input sketch of size (batch_size, sketch_channels, height, width)
+            
+        Returns:
+            yi: Output feature map of size (batch_size, out_channels, height, width)
+        """
+        xi_image_concat = torch.cat((xi, image), dim=1)  # Concat on channel dimension
+    
+        mi = nn.Sigmoid(self.conv_mi(xi_image_concat))
+        mask_concat = torch.cat((mi * xi, image), dim=1)
+        zi = self.f(self.conv_zi(mask_concat))
+        
+        ni = nn.Sigmoid(self.conv_ni(xi_image_concat))
+        xi_new = self.conv_xi(xi)
+        
+        yi = (1 - ni) * zi + ni * xi_new
+        return yi
 
 class sketchGAN_G(nn.Moduel):
     def __init__(self, mru, layer_dims, sampling_dims):
