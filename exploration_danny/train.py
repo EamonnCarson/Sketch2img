@@ -128,7 +128,7 @@ for epoch in range(num_epochs):
         aux_errG = aux_criterion(aux_output, aux_label)
         # Calculate gradients for G
         additional_loss = spd_loss(fake, input_photos, z)
-        errG = dis_errG + aux_errG + additional_loss
+        errG = dis_errG - aux_errG + additional_loss
         errG.backward()
         D_G_z2 = dis_output.mean().item()        
         # Update G
