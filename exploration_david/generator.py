@@ -11,8 +11,7 @@ class Encoder(nn.Module):
     """
     Encoder for generator, which feeds output into the decoder
     """
-    @staticmethod
-    def _encoder_block(in_channels, out_channels, **kwargs):
+    def _encoder_block(self, in_channels, out_channels, **kwargs):
         return nn.Sequential(
             MRU(in_channels, out_channels, self.image_channels, **self.mru_kwargs),
             nn.Conv2d(out_channels, out_channels, kernel_size=2, stride=2),  # Halve height and width
@@ -25,13 +24,15 @@ class Encoder(nn.Module):
         
         Args:
             num_classes: Number of possible classes
-            activation: Activation function, f, to use
-            norm: Normalization function to use inside encoder block
             init_out_channels: The number of channels the output of the first encoder block should output
             image_channels: Number of channels for the input images
             init_image_size: The initial size of the images fed into the MRUs
             image_pool: Pooling function to halve size of images fed into MRUs
             **kwargs: Keyword arguments to pass into MRU layer
+                norm: Normalization function to use after convolution (without num_features specified)
+                mask_norm: True if norm function should also be applied to masks (mi and ni)
+                activation: Activation function, f, to use
+                sn: True if spectral normalization is used for convolution weights (mainly for discriminator)
         """
         super(Encoder, self).__init__()
         self.image_channels = image_channels

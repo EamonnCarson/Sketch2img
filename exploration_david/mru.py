@@ -5,8 +5,7 @@ class MRU(nn.Module):
     """
     Masked Residual Unit, which takes in feature maps x_i and an image I, and outputs new feature maps y_i
     """
-    @staticmethod
-    def _conv3x3(in_channels, out_channels, norm, activation):
+    def _conv3x3(self, in_channels, out_channels, norm, activation):
         """
         Implements 3x3 convolution, normalization, and activation in MRU unit.
         
@@ -21,10 +20,12 @@ class MRU(nn.Module):
         torch.nn.init.xavier_uniform_(conv.weight)
         if self.sn:
             conv = torch.nn.utils.spectral_norm(conv)
+        ml = nn.ModuleList([conv])
+        
         if norm:
-            conv = norm(out_channels)(conv)  # Give it correct num_features, then feed in input
-        conv = activation(conv)
-        return conv
+            ml.append(norm(out_channels))  # Give it correct num_features, then feed in input
+        ml.append(activation)
+        return ml
     
     def __init__(self, in_channels, out_channels, image_channels, norm=nn.BatchNorm2d, mask_norm=False,
                  activation=nn.ReLU(), mask_activation=nn.Sigmoid(), sn=False):
