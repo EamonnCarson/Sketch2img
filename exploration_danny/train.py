@@ -39,15 +39,16 @@ netG = Encoder(num_classes=125,
                init_image_size=64
                ).to(device)
 
-netD = Discriminator(activation=nn.LeakyReLU(negative_slope=0.1, inplace=True),
+netD = Discriminator(num_classes=125
+                     activation=nn.LeakyReLU(negative_slope=0.1, inplace=True),
                      norm=nn.BatchNorm2d,
                      init_out_channels=64,
                      image_channels=3,
                      init_image_size=64
                      ).to(device)
 
-dis_criterion = nn.BCELoss()
-aux_criterion = nn.NLLLoss()
+dis_criterion = nn.BCELossWithLogits()
+aux_criterion = nn.CrossEntropyLossWithLogits()
 
 # import supervision, perceptual, and divsersity loss
 spd_loss = None
@@ -84,7 +85,7 @@ for epoch in range(num_epochs):
         aux_label = torch.full((batch_size, ), input_labels, device=device)
         # Forward pass real batch thru D
         # TODO: figure out first argument to netD
-        dis_output, aux_output = netD(..., input_photos)
+        dis_output, aux_output = netD(input_photos)
         # Calculate loss on all-real batch
         dis_errD_real = dis_criterion(dis_output, dis_label)
         aux_errD_real = aux_criterion(aux_output, aux_label)
@@ -93,7 +94,6 @@ for epoch in range(num_epochs):
         errD_real.backward()
         D_x = dis_output.mean().item()
         
-        # TODO: implement compute_acc
         # compute the current classification accuracy
         accuracy = compute_acc(aux_output, aux_label)
 
@@ -122,7 +122,7 @@ for epoch in range(num_epochs):
         dis_label.data.fill_(real_label) #fake labels are real label for generator
         # Since we just updated D, perform another forward pass of all-fake batch thru D
         # TODO: fill first arg
-        dis_output, aux_output = netD(..., fake)
+        dis_output, aux_output = netD(fake)
         # Calculate G's loss based on this output
         dis_errG = dis_criterion(dis_output, dis_label)
         aux_errG = aux_criterion(aux_output, aux_label)
