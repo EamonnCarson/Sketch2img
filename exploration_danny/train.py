@@ -84,7 +84,7 @@ for epoch in range(num_epochs):
         aux_label = torch.full((batch_size, ), input_labels, device=device)
         # Forward pass real batch thru D
         # TODO: figure out first argument to netD
-        dis_output, aux_output = netD(..., input_photos)
+        dis_output, aux_output = netD(input_photos)
         # Calculate loss on all-real batch
         dis_errD_real = dis_criterion(dis_output, dis_label)
         aux_errD_real = aux_criterion(aux_output, aux_label)
@@ -111,7 +111,7 @@ for epoch in range(num_epochs):
         # Calculate the gradients for this batch
         errD_fake = dis_errD_fake + aux_errD_fake
         errD_fake.backward()
-        D_G_z1 = disoutput.mean().item()
+        D_G_z1 = dis_output.mean().item()
         # Add the gradients from the all-real and all-fake batches
         errD = errD_real + errD_fake
         # Update D
@@ -122,7 +122,7 @@ for epoch in range(num_epochs):
         dis_label.data.fill_(real_label) #fake labels are real label for generator
         # Since we just updated D, perform another forward pass of all-fake batch thru D
         # TODO: fill first arg
-        dis_output, aux_output = netD(..., fake)
+        dis_output, aux_output = netD(fake)
         # Calculate G's loss based on this output
         dis_errG = dis_criterion(dis_output, dis_label)
         aux_errG = aux_criterion(aux_output, aux_label)
