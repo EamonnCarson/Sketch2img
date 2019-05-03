@@ -15,10 +15,11 @@ class Discriminator(nn.Module):
         )
     
     def __init__(self, 
-                 activation=nn.LeakyReLU(negative_slope=0.1, inplace=True),
+                 num_classes=125,
+                 activation=nn.LeakyReLU(negative_slope=0.1),
                  norm=nn.BatchNorm2d,
                  init_out_channels=64,
-                 image_channels=3,
+                 image_channels=6,
                  init_image_size=64):
         """
         Initialize discriminator
@@ -43,14 +44,13 @@ class Discriminator(nn.Module):
         self.downsampling1 = nn.Conv2d(3, 3, kernel_size=2, stride=2)
         self.downsampling2 = nn.Conv2d(3, 3, kernel_size=2, stride=2)
         self.downsampling3 = nn.Conv2d(3, 3, kernel_size=2, stride=2)
-        self.init_image_size = init_image_size
-        self.last_layer = nn.Conv2d(out8, 1, kernel_size=4, stride=1, padding=0, bias=False) # Output 1 logit
-
+        self.fc_dis = nn.Linear(512*4*4, 1)
+        self.fc_aux = nn.Linear(512*4*4, num_classes)
     
-    def forward(self, x, image):
+    def forward(self, image):
         # Each batch must have all real images or all fake images input
-        # x and image shape: 64x64
-        out = self.layer1(x, image)
+        # image shape: 64x64
+        out = self.layer1(image, image)
         image = self.downsampling1(image)
         # out and image shape: 32x32
         out = self.layer2(out, image)
@@ -62,4 +62,6 @@ class Discriminator(nn.Module):
         out = self.layer4(out, image)
         # out shape : 4x4
         out = self.last_layer(out)
-        return out
+        dis_out = self.fc_dis(out)
+        aux_out = self.fc_aux(out)
+        return dis_out, aux_out
