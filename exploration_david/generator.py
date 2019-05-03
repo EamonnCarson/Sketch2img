@@ -12,15 +12,14 @@ class Encoder(nn.Module):
     Encoder for generator, which feeds output into the decoder
     """
     @staticmethod
-    def _encoder_block(in_channels, out_channels, image_channels, activation, norm):
+    def _encoder_block(in_channels, out_channels, **kwargs):
         return nn.Sequential(
-            MRU(in_channels, out_channels, image_channels, activation),
+            MRU(in_channels, out_channels, self.image_channels, **self.mru_kwargs),
             nn.Conv2d(out_channels, out_channels, kernel_size=2, stride=2),  # Halve height and width
-            norm
         )
     
-    def __init__(self, num_classes, activation=nn.LeakyReLU, norm=nn.BatchNorm2d, init_out_channels=64, image_channels=3, 
-                 init_image_size=64, image_pool=nn.AvgPool2d(2, stride=2)):
+    def __init__(self, num_classes, init_out_channels=64, image_channels=3, 
+                 init_image_size=64, image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
         """
         Initialize encoder, consisting of several encoder blocks
         
@@ -32,17 +31,20 @@ class Encoder(nn.Module):
             image_channels: Number of channels for the input images
             init_image_size: The initial size of the images fed into the MRUs
             image_pool: Pooling function to halve size of images fed into MRUs
+            **kwargs: Keyword arguments to pass into MRU layer
         """
         super(Encoder, self).__init__()
+        self.image_channels = image_channels
+        self.mru_kwargs = kwargs
         out1 = init_out_channels
         out2 = out1 * 2
         out4 = out2 * 2
         out8 = out4 * 2
         
-        self.layer1 = self._encoder_block(1, out1, image_channels, activation, norm(out1))
-        self.layer2 = self._encoder_block(out1, out2, image_channels, activation, norm(out2))
-        self.layer3 = self._encoder_block(out2, out4, image_channels, activation, norm(out4))
-        self.layer4 = self._encoder_block(out4, out8, image_channels, activation, norm(out8))
+        self.layer1 = self._encoder_block(1, out1)
+        self.layer2 = self._encoder_block(out1, out2)
+        self.layer3 = self._encoder_block(out2, out4)
+        self.layer4 = self._encoder_block(out4, out8)
         self.label_embeds = nn.Embedding(num_classes, init_image_size ** 2)
         self.init_image_size = init_image_size
         self.image_pool = image_pool
