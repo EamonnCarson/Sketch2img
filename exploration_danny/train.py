@@ -52,8 +52,8 @@ aux_criterion = nn.NLLLoss()
 # import supervision, perceptual, and divsersity loss
 spd_loss = None
 
-real_label = 1
-fake_label = 0
+real_label = 1.0
+fake_label = 0.0
 
 
 optimizerD = optim.Adam(netD.parameters(), lr=d_lr)
@@ -83,7 +83,6 @@ for epoch in range(num_epochs):
         dis_label = torch.full((batch_size, ), real_label, device=device)
         aux_label = torch.full((batch_size, ), input_labels, device=device)
         # Forward pass real batch thru D
-        # TODO: figure out first argument to netD
         dis_output, aux_output = netD(input_photos)
         # Calculate loss on all-real batch
         dis_errD_real = dis_criterion(dis_output, dis_label)
@@ -103,8 +102,7 @@ for epoch in range(num_epochs):
         fake, z = netG(input_labels, input_sketches)
         dis_label.data.fill_(fake_label)
         # Classify all fake batch with D
-        #TODO: fill first arg netD
-        dis_output, aux_output = netD(..., fake.detach())
+        dis_output, aux_output = netD(fake)
         # Calculate D's loss on the all-fake batch
         dis_errD_fake = dis_criterion(dis_output, dis_label)
         aux_errD_fake = aux_criterion(aux_output, aux_label)
@@ -112,8 +110,26 @@ for epoch in range(num_epochs):
         errD_fake = dis_errD_fake + aux_errD_fake
         errD_fake.backward()
         D_G_z1 = dis_output.mean().item()
+
+        ## DRAGAN Loss (gradient penalty)
+        # TODO
+        X.data.copy_(input_photos)
+        alpha = torch.rand(batch_size, 1).expand(X.size())
+        x_hat = torch.autograd.Variable(
+            alpha * X.data + (1 - alpha) * X.data + 0.5 * X.data.std() * torch.rand(X.size()),
+            requires_grad=True
+        )
+        pred_hat = netD(x_hat)
+        gradients = torch.autograd.grad(
+            outputs=pred_hat, inputs=x_hat, grad_outputs=torch.ones(pred_dat.size()),
+            create_graph=True, retain_graph=True, only_inputs=True
+        )[0]
+        gradient_penalty = lambda_ * ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        gradient_penalty.backward()
+        ##
+
         # Add the gradients from the all-real and all-fake batches
-        errD = errD_real + errD_fake
+        errD = errD_real + errD_fake + gradient_penalty
         # Update D
         optimizerD.step()
 
