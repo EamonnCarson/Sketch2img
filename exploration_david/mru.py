@@ -16,8 +16,10 @@ class MRU(nn.Module):
             activation: Activation function to use after convolution
         """
         # Padding of 1 ensures that input size = output size
+        print(in_channels, out_channels)
         conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        torch.nn.init.xavier_uniform_(conv.weight)
+#         torch.nn.init.xavier_uniform_(conv.weight)
+        torch.nn.init.normal_(conv.weight, std=0.02)
         if self.sn:
             conv = torch.nn.utils.spectral_norm(conv)
         ml = nn.ModuleList([conv])
