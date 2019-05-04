@@ -67,6 +67,7 @@ G_losses = []
 D_losses = []
 img_list = []
 iters = 0
+acc_list = []
 
 print("Begin training ...")
 begin_time = time.time()
@@ -97,6 +98,7 @@ for epoch in range(num_epochs):
         
         # compute the current classification accuracy
         accuracy = compute_acc(aux_output, aux_label)
+        acc_hist.append(accuracy)
 
         ## Train with all-fake batch
         # Generate fake image batch with G 
