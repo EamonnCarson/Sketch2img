@@ -1,7 +1,87 @@
 import torch
 import torchvision
 import numpy as np
-import scipy 
+import scipy
+
+def discriminator_loss(discriminator, real_image_sample, fake_image_sample, class_labels, lambda_dragan=10, k_dragan=1):
+    bce_loss = torch.nn.BCELoss()
+    ce_loss = torch.nn.CrossEntropyLoss()
+
+    # Generate basic predictions
+    pred_real = discriminator.forward(real_image_sample) # predictions on real images
+    pred_fake = discriminator.forward(fake_image_sample) # predictions on fake images
+    pred_real_natural = pred_real[0] # prediction of real or fake
+    pred_fake_natural = pred_fake[0]
+    pred_real_class = pred_real[1] # prediction of which class
+    pred_fake_class = pred_fake[1]
+
+    # losses
+    gan_loss_d_ = gan_loss_d(pred_real_natural, pred_fake_natural)
+    gradient_penalty_ = gradient_penalty(discriminator, real_image_sample, fake_image_sample)
+    ac_loss_d_ = ac_loss_d(pred_real_class, class_labels)
+
+    return gan_loss_d_ + gradient_penalty_ + ac_loss_d_
+
+def generator_loss(discriminator, generator, real_image_sample, class_labels):
+    bce_loss = torch.nn.BCELoss()
+    ce_loss = torch.nn.CrossEntropyLoss()
+
+    # Generate fakes
+    fake_image_sample, noise_a = generator.forward(real_image_sample)
+    fake_image_sample_alt, noise_b = generator.forward(real_image_sample)
+
+    # Get Discriminator Predictions
+    pred_fake = discriminator.forward(fake_image_sample) # see discriminator
+    pred_fake_natural = pred_fake[0]
+    pred_fake_class = pred_fake[1]
+
+    # losses
+    gan_loss_g_ = gan_loss_g(pred_fake_natural)
+    ac_loss_g_ = ac_loss_g(pred_fake_classes, class_labels)
+    supervised_loss_ = supervised_loss(fake_image_sample, real_image_sample)
+    perceptual_loss_ = perceptual_loss(fake_image_sample, real_image_sample)
+    diversity_loss_  = diversity_loss(fake_image_sample, fake_image_sample_alt, noise_a, noise_b)
+
+    return gan_loss_g_ + ac_loss_g_ + supervised_loss_ + perceptual_loss_ + diversity_loss_
+
+# Discriminator component losses
+def gan_loss_d(pred_real_natural, pred_fake_natural):
+    bce_loss = torch.nn.BCELoss()
+    # first evaluate loss on real images
+    labels = torch.ones(pred_real_natural.size)
+    loss_real = bce_loss(pred_real_natural, labels)
+    # second evaluate loss on fake images
+    labels = torch.zeros(pred_fake_natural.size)
+    loss_fake = bce_loss(pred_fake_natural, labels)
+    return loss_real + loss_fake
+
+def gradient_penalty(discriminator, real_image_sample, fake_image_sample, lambda_=10, k=1):
+    alpha = torch.rand(real_image_sample.size(), 1)
+    interp = Variable(alpha * real_image_sample + (1 - alpha) * fake_image_sample, requires_grad=True)
+    pred_hat = discriminator.forward(interp)
+    pred_hat_natural = pred_hat[1]
+    gradients = grad(outputs=pred_hat, inputs=interp, grad_outputs=torch.ones(pred_hat.size()),
+            create_graph=True, retain_graph=True, only_inputs=True)[0]
+    penalty = lambda_ * ((gradients.norm(2, dim=1) - k) ** 2).mean()
+    return penalty
+
+def ac_loss_d(pred_real_class, class_labels):
+    ce_loss = torch.nn.CrossEntropyLoss()
+    ac_loss = ce_loss(pred_real_class, class_labels)
+    return ac_loss
+
+# Generator component losses
+
+def gan_loss_g(pred_fake_natural):
+    bce_loss = torch.nn.BCELoss()
+    labels = torch.ones(pred_fake_natural.size()) # ones because we want generator to fool discrim
+    gan_loss = bce_loss(pred_fake_natural)
+    return gan_loss
+
+def ac_loss_g(pred_fake_class, class_labels):
+    ce_loss = torch.nn.CrossEntropyLoss()
+    ac_loss = ce_loss(pred_fake_classes, class_labels)
+    return ac_loss
 
 def supervised_loss(image_generated, image_true):
     loss = torch.nn.L1Loss()
@@ -70,8 +150,3 @@ def perceptual_loss(image_generated, image_true):
 
 def diversity_loss(image_generated_a, image_generated_b, noise_a, noise_b):
     return -torch.mean(supervised_loss(image_generated_a, image_generated_b) / torch.norm(noise_a - noise_b, axis=1).view(-1, 1, 1, 1))
-
-def generator_loss(image_true, image_generated_a, noise_a, labels_a, image_generated_b, noise_b, labels_b):
-    # this might need more arguments depending on how the gan_loss and ac_loss are implemented 
-    #TODO: populate gan_loss and ac_loss
-    return gan_loss - ac_loss + supervised_loss(image_generated_a, image_true) + perceptual_loss(image_generated_a, image_true) + diversity_loss(image_generated_a, image_generated_b, noise_a, noise_b)
