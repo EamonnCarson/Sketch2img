@@ -25,7 +25,7 @@ class Encoder(nn.Module):
         ml = nn.ModuleList([MRU(in_channels, out_channels, self.image_channels, **self.mru_kwargs)])
         if pool:
             ml.append(nn.Conv2d(out_channels, out_channels, 2, stride=2))  # Halve height and width
-        return ml
+        return nn.Sequential(*ml)
     
     def __init__(self, num_classes, init_in_channels, init_out_channels=64, image_channels=3, 
                  init_image_size=64, image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
@@ -100,7 +100,7 @@ class Decoder(nn.Module):
             else:
                 deconv_channels = out_channels
             ml.append(nn.ConvTranspose2d(out_channels, deconv_channels, 2, stride=2))
-        return ml
+        return nn.Sequential(*ml)
     
     def __init__(self, init_out_channels=64, image_channels=3, init_image_size=64, 
                  image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
