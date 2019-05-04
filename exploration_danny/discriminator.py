@@ -7,12 +7,11 @@ class Discriminator(nn.Module):
     Discriminator for SketchyGAN
     """
     @staticmethod
-    def _mru_block(in_channels, out_channels, image_channels, activation, norm):
-        return nn.Sequential(
-            MRU(in_channels, out_channels, image_channels, activation),
-            nn.Conv2d(out_channels, out_channels, kernel_size=2, stride=2)
-        )
-    
+    def _mru_block(in_channels, out_channels, image_channels, activation, norm, sn=True):
+        ml = nn.ModuleList([MRU(in_channels, out_channels, image_channels, norm=norm, activation=activation, sn=sn)])
+        ml.append(nn.Conv2d(out_channels, out_channels, 2, stride=2))  
+        return ml
+
     def __init__(self, 
                  num_classes=125,
                  activation=nn.LeakyReLU(negative_slope=0.1),
