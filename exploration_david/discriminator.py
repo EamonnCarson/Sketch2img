@@ -17,8 +17,8 @@ class Discriminator(nn.Module):
         self.fc_aux = nn.Linear(self.linear_size, num_classes)
         
     def forward(self, image):
-        out = self.encoder((image, image))
-        out = out.view(-1, linear_size)
+        out = self.encoder((image, image))[-1]
+        out = out.view(-1, self.linear_size)
         dis_out = self.fc_dis(out)
         aux_out = self.fc_aux(out)
         return dis_out, aux_out
