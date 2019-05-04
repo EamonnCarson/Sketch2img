@@ -27,13 +27,14 @@ class Encoder(nn.Module):
             ml.append(nn.Conv2d(out_channels, out_channels, 2, stride=2))  # Halve height and width
         return ml
     
-    def __init__(self, num_classes, init_out_channels=64, image_channels=3, 
+    def __init__(self, num_classes, init_in_channels, init_out_channels=64, image_channels=3, 
                  init_image_size=64, image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
         """
         Initialize encoder, consisting of several encoder blocks
         
         Args:
             num_classes: Number of possible classes
+            init_in_channels: The number of channels the initial input feature maps have
             init_out_channels: The number of channels the first encoder block should output
             image_channels: Number of channels for the input images
             init_image_size: The initial size of the images fed into the MRUs
@@ -47,33 +48,28 @@ class Encoder(nn.Module):
         """
         super(Encoder, self).__init__()
         self.image_channels = image_channels
-        self.label_embeds = nn.Embedding(num_classes, init_image_size ** 2)
         self.init_image_size = init_image_size
         self.image_pool = image_pool
         self.mru_kwargs = kwargs
         
-        self.layer1 = self._encoder_block(1, out_channels=init_out_channels)
+        self.layer1 = self._encoder_block(init_in_channels, out_channels=init_out_channels)
         self.layer2 = self._encoder_block(init_out_channels)
         self.layer3 = self._encoder_block(init_out_channels * 2)
         self.layer4 = self._encoder_block(init_out_channels * 4, pool=False)
     
-    def forward(self, labels, images):
+    def forward(self, input, images):
         """
         Implements forward pass of encoder
         
         Args:
-            labels: Tensor of integer labels for each image of size (batch_size, 1)
+            input: Tensor of initial input feature maps of size (batch_size, init_in_channels, init_image_size, init_image_size)
             images: Tensor of images of size (batch_size, image_channels, init_image_size, init_image_size)
             
         Returns:
             out: Array of the outputs of the encoder blocks. 
             The final encoder output has size (batch_size, init_out_channels * 8, init_image_size / 8, init_image_size / 8)
         """
-        ## Convert labels from (batch_size, 1) to size (batch_size, 1, init_image_size, init_image_size)
-        embeds = self.label_embeds(labels)
-        embeds = embeds.view(-1, 1, init_image_size, init_image_size)
-        
-        layer1_out = self.layer1(embeds, images)
+        layer1_out = self.layer1(input, images)
         images = self.image_pool(images)
         layer2_out = self.layer2(layer1_out, images)
         images = self.image_pool(images)
@@ -190,8 +186,11 @@ class Generator(nn.Module):
                 sn: True if spectral normalization is used for convolution weights (mainly for discriminator)
         """
         super(Generator, self).__init__()
-        self.encoder = Encoder(num_classes, init_out_channels, image_channels, init_image_size, image_pool, **kwargs)
-        self.decoder = Decoder(init_out_channels, image_channels, init_image_size, image_pool, **kwargs)
+        self.label_embeds = nn.Embedding(num_classes, init_image_size ** 2)
+        self.encoder = Encoder(num_classes, 1, init_out_channels=init_out_channels, image_channels=image_channels,
+                               init_image_size=init_image_size, image_pool=image_pool, **kwargs)
+        self.decoder = Decoder(init_out_channels=init_out_channels, image_channels=image_channels, 
+                               init_image_size=init_image_size, image_pool=image_pool, **kwargs)
         
     
     def forward(self, labels, images):
@@ -206,5 +205,9 @@ class Generator(nn.Module):
             out: Output from the decoder, with size (batch_size, 3, init_image_size, init_image_size)
             noise: The Gaussian noise concatenated at the bottleneck
         """
-        encoder_output = self.encoder(labels, images)
+        ## Convert labels from (batch_size, 1) to size (batch_size, 1, init_image_size, init_image_size)
+        embeds = self.label_embeds(labels)
+        embeds = embeds.view(-1, 1, init_image_size, init_image_size)
+        
+        encoder_output = self.encoder(embeds, images)
         return self.decoder(encoder_output, images)
