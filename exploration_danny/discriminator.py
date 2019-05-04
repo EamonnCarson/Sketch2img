@@ -10,8 +10,7 @@ class Discriminator(nn.Module):
     def _mru_block(in_channels, out_channels, image_channels, activation, norm):
         return nn.Sequential(
             MRU(in_channels, out_channels, image_channels, activation),
-            nn.Conv2d(out_channels, out_channels, kernel_size=2, stride=2),  # Halve height and width
-            norm
+            nn.Conv2d(out_channels, out_channels, kernel_size=2, stride=2)
         )
     
     def __init__(self, 
@@ -49,7 +48,7 @@ class Discriminator(nn.Module):
     
     def forward(self, image):
         # Each batch must have all real images or all fake images input
-        # image shape: 64x64
+        # image shape: Nx3x64x64
         out = self.layer1(image, image)
         image = self.downsampling1(image)
         # out and image shape: 32x32
