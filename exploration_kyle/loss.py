@@ -3,9 +3,10 @@ import torchvision
 import numpy as np
 import scipy
 import logging
+from torch.autograd import Variable, grad
 
 def discriminator_loss(discriminator, real_image_sample, fake_image_sample, class_labels, lambda_dragan=10, k_dragan=1):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     ce_loss = torch.nn.CrossEntropyLoss()
 
     # Generate basic predictions
@@ -27,7 +28,7 @@ def discriminator_loss(discriminator, real_image_sample, fake_image_sample, clas
     return gan_loss_d_ + gradient_penalty_ + ac_loss_d_
 
 def generator_loss(discriminator, generator, real_image_sample, class_labels):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     ce_loss = torch.nn.CrossEntropyLoss()
 
     # Generate fakes
@@ -41,7 +42,7 @@ def generator_loss(discriminator, generator, real_image_sample, class_labels):
 
     # losses
     gan_loss_g_ = gan_loss_g(pred_fake_natural)
-    ac_loss_g_ = ac_loss_g(pred_fake_classes, class_labels)
+    ac_loss_g_ = ac_loss_g(pred_fake_class, class_labels)
     supervised_loss_ = supervised_loss(fake_image_sample, real_image_sample)
     perceptual_loss_ = perceptual_loss(fake_image_sample, real_image_sample)
     diversity_loss_  = diversity_loss(fake_image_sample, fake_image_sample_alt, noise_a, noise_b)
@@ -53,7 +54,7 @@ def generator_loss(discriminator, generator, real_image_sample, class_labels):
 
 # Discriminator component losses
 def gan_loss_d(pred_real_natural, pred_fake_natural):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     # first evaluate loss on real images
     labels = torch.ones(pred_real_natural.size)
     loss_real = bce_loss(pred_real_natural, labels)
@@ -80,14 +81,14 @@ def ac_loss_d(pred_real_class, class_labels):
 # Generator component losses
 
 def gan_loss_g(pred_fake_natural):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     labels = torch.ones(pred_fake_natural.size()) # ones because we want generator to fool discrim
     gan_loss = bce_loss(pred_fake_natural)
     return gan_loss
 
 def ac_loss_g(pred_fake_class, class_labels):
     ce_loss = torch.nn.CrossEntropyLoss()
-    ac_loss = ce_loss(pred_fake_classes, class_labels)
+    ac_loss = ce_loss(pred_fake_class, class_labels)
     return ac_loss
 
 def supervised_loss(image_generated, image_true):
