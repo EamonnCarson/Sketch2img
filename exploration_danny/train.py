@@ -39,15 +39,16 @@ netG = Encoder(num_classes=125,
                init_image_size=64
                ).to(device)
 
-netD = Discriminator(activation=nn.LeakyReLU(negative_slope=0.1, inplace=True),
+netD = Discriminator(num_classes=125
+                     activation=nn.LeakyReLU(negative_slope=0.1, inplace=True),
                      norm=nn.BatchNorm2d,
                      init_out_channels=64,
                      image_channels=3,
                      init_image_size=64
                      ).to(device)
 
-dis_criterion = nn.BCELoss()
-aux_criterion = nn.NLLLoss()
+dis_criterion = nn.BCELossWithLogits()
+aux_criterion = nn.CrossEntropyLossWithLogits()
 
 # import supervision, perceptual, and divsersity loss
 spd_loss = None
@@ -92,7 +93,6 @@ for epoch in range(num_epochs):
         errD_real.backward()
         D_x = dis_output.mean().item()
         
-        # TODO: implement compute_acc
         # compute the current classification accuracy
         accuracy = compute_acc(aux_output, aux_label)
 
