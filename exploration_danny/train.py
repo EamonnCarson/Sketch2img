@@ -13,6 +13,8 @@ from discriminator import *
 import torch.optim as optim
 import time
 import matplotlib.pyplot as plt
+from utils import * 
+from loss import *
 
 
 #PARAMS
@@ -31,13 +33,13 @@ photo_sketch_dl = None
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-netG = Encoder(num_classes=125,
-               activation=nn.ReLU,
-               norm=nn.BatchNorm2d,
-               init_out_channels=64,
-               image_channels=3,
-               init_image_size=64
-               ).to(device)
+netG = Generator(num_classes=125,
+                 activation=nn.ReLU,
+                 norm=nn.BatchNorm2d,
+                 init_out_channels=64,
+                 image_channels=3,
+                 init_image_size=64
+                 ).to(device)
 
 netD = Discriminator(num_classes=125
                      activation=nn.LeakyReLU(negative_slope=0.1, inplace=True),
@@ -47,8 +49,8 @@ netD = Discriminator(num_classes=125
                      init_image_size=64
                      ).to(device)
 
-dis_criterion = nn.BCELossWithLogits()
-aux_criterion = nn.CrossEntropyLossWithLogits()
+dis_criterion = nn.BCEWithLogitsLoss()
+aux_criterion = nn.CrossEntropyLoss()
 
 # import supervision, perceptual, and divsersity loss
 spd_loss = None
@@ -75,7 +77,7 @@ for epoch in range(num_epochs):
         GANLoss - auxiliary loss + supervision loss + perceptual loss + diversity loss
         """
         # Assuming data is a list of [photos, labels, sketches]
-        input_photos, input_labels, input_sketches = data
+        input_photos, input_sketches, input_labels = data
         
         ## Update netD: maximize log(D(y)) + log(1-D(G(x,z)))
         # Train with all-real images
@@ -84,10 +86,10 @@ for epoch in range(num_epochs):
         dis_label = torch.full((batch_size, ), real_label, device=device)
         aux_label = torch.full((batch_size, ), input_labels, device=device)
         # Forward pass real batch thru D
-        dis_output, aux_output = netD(input_photos)
+        dis_output_real, aux_output_real = netD(input_photos)
         # Calculate loss on all-real batch
-        dis_errD_real = dis_criterion(dis_output, dis_label)
-        aux_errD_real = aux_criterion(aux_output, aux_label)
+        dis_errD_real = dis_criterion(dis_output_real, dis_label) #pred_real_natural
+        aux_errD_real = aux_criterion(aux_output_real, aux_label) #pred_real_class
         # Calculate gradients for D in the backward pass
         errD_real = dis_errD_real + aux_errD_real
         errD_real.backward()
@@ -102,34 +104,19 @@ for epoch in range(num_epochs):
         fake, z = netG(input_labels, input_sketches)
         dis_label.data.fill_(fake_label)
         # Classify all fake batch with D
-        dis_output, aux_output = netD(fake)
+        dis_output_fake, aux_output_fake = netD(fake)
         # Calculate D's loss on the all-fake batch
-        dis_errD_fake = dis_criterion(dis_output, dis_label)
-        aux_errD_fake = aux_criterion(aux_output, aux_label)
+        dis_errD_fake = dis_criterion(dis_output_fake, dis_label) #pred_fake_natural
+        aux_errD_fake = aux_criterion(aux_output_fake, aux_label) #pred_fake_class
         # Calculate the gradients for this batch
         errD_fake = dis_errD_fake + aux_errD_fake
         errD_fake.backward()
         D_G_z1 = dis_output.mean().item()
-
-        ## DRAGAN Loss (gradient penalty)
-        # TODO
-        X.data.copy_(input_photos)
-        alpha = torch.rand(batch_size, 1).expand(X.size())
-        x_hat = torch.autograd.Variable(
-            alpha * X.data + (1 - alpha) * X.data + 0.5 * X.data.std() * torch.rand(X.size()),
-            requires_grad=True
-        )
-        pred_hat = netD(x_hat)
-        gradients = torch.autograd.grad(
-            outputs=pred_hat, inputs=x_hat, grad_outputs=torch.ones(pred_dat.size()),
-            create_graph=True, retain_graph=True, only_inputs=True
-        )[0]
-        gradient_penalty = lambda_ * ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-        gradient_penalty.backward()
-        ##
-
+        # Calculate DRAGAN Loss
+        grad_penalty = gradient_penalty(netD, input_photos, fake)
+        grad_penalty.backward()
         # Add the gradients from the all-real and all-fake batches
-        errD = errD_real + errD_fake + gradient_penalty
+        errD = errD_real + errD_fake + grad_penalty
         # Update D
         optimizerD.step()
 
@@ -137,14 +124,19 @@ for epoch in range(num_epochs):
         netG.zero_grad()
         dis_label.data.fill_(real_label) #fake labels are real label for generator
         # Since we just updated D, perform another forward pass of all-fake batch thru D
-        # TODO: fill first arg
         dis_output, aux_output = netD(fake)
         # Calculate G's loss based on this output
         dis_errG = dis_criterion(dis_output, dis_label)
         aux_errG = aux_criterion(aux_output, aux_label)
         # Calculate gradients for G
-        additional_loss = spd_loss(fake, input_photos, z)
-        errG = dis_errG - aux_errG + additional_loss
+        # Supervised loss
+        supervised_loss_G = supervised_loss(fake, input_photos)
+        # Perceptual loss
+        perceptual_loss_G = perceptual_loss(fake, input_photos)
+        # Diversity Loss; Create another fake image
+        fake_alt , z_alt = netG(input_labels, input_sketches)
+        diversity_loss_G = diversity_loss(fake, fake_alt, z, z_alt)
+        errG = dis_errG - aux_errG + supervised_loss_G + perceptual_loss_G + diversity_loss_G
         errG.backward()
         D_G_z2 = dis_output.mean().item()        
         # Update G
