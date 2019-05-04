@@ -95,7 +95,7 @@ def supervised_loss(image_generated, image_true):
     loss = torch.nn.L1Loss()
     return loss(image_generated, image_true)
 
-def inception_score(imgs, cuda=False, batch_size=4, resize=True, splits=1):
+def inception_score(imgs, cuda=True, batch_size=4, resize=True, splits=1):
     """Computes the inception score of the generated images imgs
     imgs -- Torch dataset of (3xHxW) numpy images normalized in the range [-1, 1]
     cuda -- whether or not to run on GPU
