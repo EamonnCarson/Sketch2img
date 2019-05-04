@@ -29,7 +29,7 @@ class MRU(nn.Module):
         return ml
     
     def __init__(self, in_channels, out_channels, image_channels, norm=nn.BatchNorm2d, mask_norm=False,
-                 activation=nn.ReLU(), mask_activation=nn.Sigmoid(), sn=False):
+                 activation=nn.LeakyReLU(), mask_activation=nn.Sigmoid(), sn=False):
         """
         Args:
             in_channels: Number of input channels (e.g. 3 for a RGB image)
