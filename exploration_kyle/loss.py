@@ -2,6 +2,7 @@ import torch
 import torchvision
 import numpy as np
 import scipy
+import logging
 
 def discriminator_loss(discriminator, real_image_sample, fake_image_sample, class_labels, lambda_dragan=10, k_dragan=1):
     bce_loss = torch.nn.BCELoss()
@@ -19,6 +20,9 @@ def discriminator_loss(discriminator, real_image_sample, fake_image_sample, clas
     gan_loss_d_ = gan_loss_d(pred_real_natural, pred_fake_natural)
     gradient_penalty_ = gradient_penalty(discriminator, real_image_sample, fake_image_sample)
     ac_loss_d_ = ac_loss_d(pred_real_class, class_labels)
+    
+    logging.basicConfig(filename='discriminator.log', level=logging.DEBUG)
+    logging.info("%f,%f,%f \n", gan_loss_d_, gradient_penalty_, ac_loss_d_)
 
     return gan_loss_d_ + gradient_penalty_ + ac_loss_d_
 
@@ -41,6 +45,9 @@ def generator_loss(discriminator, generator, real_image_sample, class_labels):
     supervised_loss_ = supervised_loss(fake_image_sample, real_image_sample)
     perceptual_loss_ = perceptual_loss(fake_image_sample, real_image_sample)
     diversity_loss_  = diversity_loss(fake_image_sample, fake_image_sample_alt, noise_a, noise_b)
+
+    logging.basicConfig(filename='generator.log', level=logging.DEBUG)
+    logging.info("%f,%f,%f,%f,%f \n", gan_loss_g_, ac_loss_g_, supervised_loss_, perceptual_loss_, diversity_loss_)
 
     return gan_loss_g_ + ac_loss_g_ + supervised_loss_ + perceptual_loss_ + diversity_loss_
 
