@@ -4,7 +4,7 @@ import numpy as np
 import scipy
 
 def discriminator_loss(discriminator, real_image_sample, fake_image_sample, class_labels, lambda_dragan=10, k_dragan=1):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     ce_loss = torch.nn.CrossEntropyLoss()
 
     # Generate basic predictions
@@ -23,7 +23,7 @@ def discriminator_loss(discriminator, real_image_sample, fake_image_sample, clas
     return gan_loss_d_ + gradient_penalty_ + ac_loss_d_
 
 def generator_loss(discriminator, generator, real_image_sample, class_labels):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     ce_loss = torch.nn.CrossEntropyLoss()
 
     # Generate fakes
@@ -46,7 +46,7 @@ def generator_loss(discriminator, generator, real_image_sample, class_labels):
 
 # Discriminator component losses
 def gan_loss_d(pred_real_natural, pred_fake_natural):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     # first evaluate loss on real images
     labels = torch.ones(pred_real_natural.size)
     loss_real = bce_loss(pred_real_natural, labels)
@@ -73,14 +73,14 @@ def ac_loss_d(pred_real_class, class_labels):
 # Generator component losses
 
 def gan_loss_g(pred_fake_natural):
-    bce_loss = torch.nn.BCELoss()
+    bce_loss = torch.nn.BCEWithLogitsLoss()
     labels = torch.ones(pred_fake_natural.size()) # ones because we want generator to fool discrim
     gan_loss = bce_loss(pred_fake_natural)
     return gan_loss
 
 def ac_loss_g(pred_fake_class, class_labels):
     ce_loss = torch.nn.CrossEntropyLoss()
-    ac_loss = ce_loss(pred_fake_classes, class_labels)
+    ac_loss = ce_loss(pred_fake_class, class_labels)
     return ac_loss
 
 def supervised_loss(image_generated, image_true):
