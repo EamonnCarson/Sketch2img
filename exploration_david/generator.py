@@ -25,7 +25,7 @@ class Encoder(nn.Module):
         ml = nn.ModuleList([MRU(in_channels, out_channels, self.image_channels, **self.mru_kwargs)])
         if pool:
             ml.append(nn.Conv2d(out_channels, out_channels, 2, stride=2))  # Halve height and width
-        return nn.Sequential(*ml)
+        return ml
     
     def __init__(self, num_classes, init_in_channels, init_out_channels=64, image_channels=3, 
                  init_image_size=64, image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
@@ -52,10 +52,27 @@ class Encoder(nn.Module):
         self.image_pool = image_pool
         self.mru_kwargs = kwargs
         
-        self.layer1 = self._encoder_block(init_in_channels, out_channels=init_out_channels)
-        self.layer2 = self._encoder_block(init_out_channels)
-        self.layer3 = self._encoder_block(init_out_channels * 2)
-        self.layer4 = self._encoder_block(init_out_channels * 4, pool=False)
+        self.layers = nn.ModuleList([
+            self._encoder_block(init_in_channels, out_channels=init_out_channels), 
+            self._encoder_block(init_out_channels), 
+            self._encoder_block(init_out_channels * 2), 
+            self._encoder_block(init_out_channels * 4, pool=False)
+        ])
+        
+    def _forward_encoder_block(self, block, input_maps, images):
+        """
+        Runs the forward pass through a single encoder block.
+        
+        Args:
+            layer: Encoder block to run forward pass through
+            input_maps: Tensor of input feature maps of size (batch_size, in_channels, height, width)
+            images: Tensor of images of size (batch_size, out_channels, height, width)
+        """
+        mru_out = block[0]((input_maps, images))
+        out = mru_out
+        for layer in block[1:]:
+            out = layer(out)
+        return mru_out, out
     
     def forward(self, input_tuple):
         """
@@ -70,14 +87,13 @@ class Encoder(nn.Module):
             The final encoder output has size (batch_size, init_out_channels * 8, init_image_size / 8, init_image_size / 8)
         """
         input_maps, images = input_tuple
-        layer1_out = self.layer1((input_maps, images))
-        images = self.image_pool(images)
-        layer2_out = self.layer2((layer1_out, images))
-        images = self.image_pool(images)
-        layer3_out = self.layer3((layer2_out, images))
-        images = self.image_pool(images)
-        layer4_out = self.layer4((layer3_out, images))
-        return [layer1_out, layer2_out, layer3_out, layer4_out]
+        mru_outputs = []
+        out = input_maps
+        for layer in self.layers:
+            mru_out, out = self._forward_encoder_block(layer, out, images)
+            mru_outputs.append(mru_out)
+            images = self.image_pool(images)
+        return mru_outputs
         
 
 class Decoder(nn.Module):
@@ -125,7 +141,7 @@ class Decoder(nn.Module):
         self.image_pool = image_pool
         self.mru_kwargs = kwargs
         
-        self.layer1 = self._decoder_block(init_out_channels * 8, deconv_halve=False)
+        self.layer1 = self._decoder_block(init_out_channels * 16)
         self.layer2 = self._decoder_block(init_out_channels * 8)
         self.layer3 = self._decoder_block(init_out_channels * 4)
         self.layer4 = self._decoder_block(init_out_channels * 2, upsample=False)
@@ -155,15 +171,15 @@ class Decoder(nn.Module):
         
         # Concat Gaussian noise to output of encoder
         noise = torch.randn(encoder_output[0].size())
-        out = torch.cat(encoder_output[0], noise, dim=1)
+        out = torch.cat((encoder_output[0], noise), dim=1)
         
-        out = self.layer1(out, images_resized[0])
-        out = torch.cat(encoder_output[1], out, dim=1)
-        out = self.layer2(out, images_resized[1])
-        out = torch.cat(encoder_output[2], out, dim=1)
-        out = self.layer3(out, images_resized[2])
-        out = torch.cat(encoder_output[3], out, dim=1)
-        out = self.layer4(out, images_resized[3])
+        out = self.layer1((out, images_resized[0]))
+        out = torch.cat((encoder_output[1], out), dim=1)
+        out = self.layer2((out, images_resized[1]))
+        out = torch.cat((encoder_output[2], out), dim=1)
+        out = self.layer3((out, images_resized[2]))
+        out = torch.cat((encoder_output[3], out), dim=1)
+        out = self.layer4((out, images_resized[3]))
         out = self.layer5(out)
         return out, noise
     
@@ -212,5 +228,5 @@ class Generator(nn.Module):
         embeds = self.label_embeds(labels)
         embeds = embeds.view(-1, 1, self.init_image_size, self.init_image_size)
         
-        encoder_output = self.encoder(embeds, images)
-        return self.decoder(encoder_output, images)
+        encoder_output = self.encoder((embeds, images))
+        return self.decoder((encoder_output, images))
