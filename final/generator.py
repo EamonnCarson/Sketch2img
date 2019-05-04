@@ -57,25 +57,26 @@ class Encoder(nn.Module):
         self.layer3 = self._encoder_block(init_out_channels * 2)
         self.layer4 = self._encoder_block(init_out_channels * 4, pool=False)
     
-    def forward(self, input, images):
+    def forward(self, input_tuple):
         """
         Implements forward pass of encoder
         
         Args:
-            input: Tensor of initial input feature maps of size (batch_size, init_in_channels, init_image_size, init_image_size)
+            input_maps: Tensor of input feature maps of size (batch_size, init_in_channels, init_image_size, init_image_size)
             images: Tensor of images of size (batch_size, image_channels, init_image_size, init_image_size)
             
         Returns:
             out: Array of the outputs of the encoder blocks. 
             The final encoder output has size (batch_size, init_out_channels * 8, init_image_size / 8, init_image_size / 8)
         """
-        layer1_out = self.layer1(input, images)
+        input_maps, images = input_tuple
+        layer1_out = self.layer1((input_maps, images))
         images = self.image_pool(images)
-        layer2_out = self.layer2(layer1_out, images)
+        layer2_out = self.layer2((layer1_out, images))
         images = self.image_pool(images)
-        layer3_out = self.layer3(layer2_out, images)
+        layer3_out = self.layer3((layer2_out, images))
         images = self.image_pool(images)
-        layer4_out = self.layer4(layer3_out, images)
+        layer4_out = self.layer4((layer3_out, images))
         return [layer1_out, layer2_out, layer3_out, layer4_out]
         
 
@@ -130,7 +131,7 @@ class Decoder(nn.Module):
         self.layer4 = self._decoder_block(init_out_channels * 2, upsample=False)
         self.layer5 = nn.Sequential(nn.Conv2d(init_out_channels, 3, 3, padding=1), nn.Tanh())  # Should there be norm here?
         
-    def forward(self, encoder_output, images):
+    def forward(self, input_tuple):
         """
         Implements forward pass of decoder
         
@@ -142,6 +143,7 @@ class Decoder(nn.Module):
             out: Output from the decoder, with size (batch_size, 3, init_image_size, init_image_size)
             noise: The Gaussian noise concatenated at the bottleneck
         """
+        encoder_output, images = input_tuple
         encoder_output.reverse()
         # Create list of resized images from (init_image_size, init_image_size) to (init_image_size / 8, init_image_size / 8)
         images_resized = [images]
@@ -187,6 +189,7 @@ class Generator(nn.Module):
         """
         super(Generator, self).__init__()
         self.label_embeds = nn.Embedding(num_classes, init_image_size ** 2)
+        self.init_image_size = init_image_size
         self.encoder = Encoder(num_classes, 1, init_out_channels=init_out_channels, image_channels=image_channels,
                                init_image_size=init_image_size, image_pool=image_pool, **kwargs)
         self.decoder = Decoder(init_out_channels=init_out_channels, image_channels=image_channels, 
@@ -207,7 +210,7 @@ class Generator(nn.Module):
         """
         ## Convert labels from (batch_size, 1) to size (batch_size, 1, init_image_size, init_image_size)
         embeds = self.label_embeds(labels)
-        embeds = embeds.view(-1, 1, init_image_size, init_image_size)
+        embeds = embeds.view(-1, 1, self.init_image_size, self.init_image_size)
         
         encoder_output = self.encoder(embeds, images)
         return self.decoder(encoder_output, images)

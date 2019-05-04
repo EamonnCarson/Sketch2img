@@ -98,7 +98,7 @@ for epoch in range(num_epochs):
         
         # compute the current classification accuracy
         accuracy = compute_acc(aux_output, aux_label)
-        acc_hist.append(accuracy)
+        acc_list.append(accuracy)
 
         ## Train with all-fake batch
         # Generate fake image batch with G 

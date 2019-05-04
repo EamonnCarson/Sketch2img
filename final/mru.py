@@ -26,7 +26,7 @@ class MRU(nn.Module):
         if norm:
             ml.append(norm(out_channels))  # Give it correct num_features, then feed in input
         ml.append(activation)
-        return ml
+        return nn.Sequential(*ml)
     
     def __init__(self, in_channels, out_channels, image_channels, norm=nn.BatchNorm2d, mask_norm=False,
                  activation=nn.LeakyReLU(), mask_activation=nn.Sigmoid(), sn=False):
@@ -49,7 +49,7 @@ class MRU(nn.Module):
         self.conv_zi = self._conv3x3(in_channels + image_channels, out_channels, norm, activation)
         self.conv_xi = self._conv3x3(in_channels, out_channels, norm, activation)
 
-    def forward(self, xi, image):
+    def forward(self, input_tuple):
         """
         Args:
             xi: Input feature map of size (batch_size, in_channels, height, width)
@@ -58,6 +58,7 @@ class MRU(nn.Module):
         Returns:
             yi: Output feature map of size (batch_size, out_channels, height, width)
         """
+        xi, image = input_tuple
         xi_image_concat = torch.cat((xi, image), dim=1)  # Concat on channel dimension
     
         mi = self.conv_mi(xi_image_concat)
