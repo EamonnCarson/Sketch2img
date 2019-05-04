@@ -95,7 +95,7 @@ def supervised_loss(image_generated, image_true):
     loss = torch.nn.L1Loss()
     return loss(image_generated, image_true)
 
-def inception_score(imgs, cuda=True, batch_size=32, resize=False, splits=1):
+def inception_score(imgs, cuda=False, batch_size=4, resize=True, splits=1):
     """Computes the inception score of the generated images imgs
     imgs -- Torch dataset of (3xHxW) numpy images normalized in the range [-1, 1]
     cuda -- whether or not to run on GPU
@@ -133,6 +133,7 @@ def inception_score(imgs, cuda=True, batch_size=32, resize=False, splits=1):
     preds = np.zeros((N, 1000))
 
     for i, batch in enumerate(dataloader, 0):
+        
         batch = batch.type(dtype)
         batchv = torch.autograd.Variable(batch)
         batch_size_i = batch.size()[0]
@@ -157,4 +158,4 @@ def perceptual_loss(image_generated, image_true):
     return inception_score(image_generated)[0] - inception_score(image_true)[0], inception_score(image_generated)[1] - inception_score(image_true)[1]
 
 def diversity_loss(image_generated_a, image_generated_b, noise_a, noise_b):
-    return -torch.mean(supervised_loss(image_generated_a, image_generated_b) / torch.norm(noise_a - noise_b, axis=1).view(-1, 1, 1, 1))
+    return -torch.mean(supervised_loss(image_generated_a, image_generated_b) / torch.norm(noise_a - noise_b, dim=1).view(-1, 1, 1, 1))
