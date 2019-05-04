@@ -41,7 +41,7 @@ netG = Generator(num_classes=125,
                  init_image_size=64
                  ).to(device)
 
-netD = Discriminator(num_classes=125
+netD = Discriminator(num_classes=125,
                      activation=nn.LeakyReLU(negative_slope=0.1, inplace=True),
                      norm=nn.BatchNorm2d,
                      init_out_channels=64,
