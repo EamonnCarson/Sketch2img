@@ -42,6 +42,7 @@ class Encoder(nn.Module):
                 norm: Normalization function to use after convolution (without num_features specified)
                 mask_norm: True if norm function should also be applied to masks (mi and ni)
                 activation: Activation function, f, to use
+                mask_activation: Activation function to use on masks mi and ni
                 sn: True if spectral normalization is used for convolution weights (mainly for discriminator)
         """
         super(Encoder, self).__init__()
@@ -119,6 +120,7 @@ class Decoder(nn.Module):
                 norm: Normalization function to use after convolution (without num_features specified)
                 mask_norm: True if norm function should also be applied to masks (mi and ni)
                 activation: Activation function, f, to use
+                mask_activation: Activation function to use on masks mi and ni
                 sn: True if spectral normalization is used for convolution weights (mainly for discriminator)
         """
         super(Decoder, self).__init__()
@@ -184,6 +186,7 @@ class Generator(nn.Module):
                 norm: Normalization function to use after convolution (without num_features specified)
                 mask_norm: True if norm function should also be applied to masks (mi and ni)
                 activation: Activation function, f, to use
+                mask_activation: Activation function to use on masks mi and ni
                 sn: True if spectral normalization is used for convolution weights (mainly for discriminator)
         """
         super(Generator, self).__init__()

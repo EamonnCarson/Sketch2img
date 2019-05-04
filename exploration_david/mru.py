@@ -16,7 +16,6 @@ class MRU(nn.Module):
             activation: Activation function to use after convolution
         """
         # Padding of 1 ensures that input size = output size
-        print(in_channels, out_channels)
         conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
 #         torch.nn.init.xavier_uniform_(conv.weight)
         torch.nn.init.normal_(conv.weight, std=0.02)
@@ -39,6 +38,7 @@ class MRU(nn.Module):
             norm: Normalization function to use after convolution (without num_features specified)
             mask_norm: True if norm function should also be applied to masks (mi and ni)
             activation: Activation function, f, to use
+            mask_activation: Activation function to use on masks mi and ni
             sn: True if spectral normalization is used for convolution weights (mainly for discriminator)
         """
         super(MRU, self).__init__()
