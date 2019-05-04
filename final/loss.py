@@ -64,10 +64,10 @@ def gan_loss_d(pred_real_natural, pred_fake_natural):
     return loss_real + loss_fake
 
 def gradient_penalty(discriminator, real_image_sample, fake_image_sample, lambda_=10, k=1):
-    alpha = torch.rand(real_image_sample.size(), 1)
+    alpha = torch.rand(real_image_sample.size()[0], 1, 1, 1).expand(real_image_sample.size())
     interp = Variable(alpha * real_image_sample + (1 - alpha) * fake_image_sample, requires_grad=True)
-    pred_hat = discriminator.forward(interp)
-    pred_hat_natural = pred_hat[1]
+    pred_hat, _ = discriminator.forward(interp)
+    #pred_hat_natural = pred_hat[1]
     gradients = grad(outputs=pred_hat, inputs=interp, grad_outputs=torch.ones(pred_hat.size()),
             create_graph=True, retain_graph=True, only_inputs=True)[0]
     penalty = lambda_ * ((gradients.norm(2, dim=1) - k) ** 2).mean()
