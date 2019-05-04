@@ -25,7 +25,7 @@ class Encoder(nn.Module):
         ml = nn.ModuleList([MRU(in_channels, out_channels, self.image_channels, **self.mru_kwargs)])
         if pool:
             ml.append(nn.Conv2d(out_channels, out_channels, 2, stride=2))  # Halve height and width
-        return ml
+        return nn.Sequential(*ml)
     
     def __init__(self, num_classes, init_in_channels, init_out_channels=64, image_channels=3, 
                  init_image_size=64, image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
@@ -57,19 +57,20 @@ class Encoder(nn.Module):
         self.layer3 = self._encoder_block(init_out_channels * 2)
         self.layer4 = self._encoder_block(init_out_channels * 4, pool=False)
     
-    def forward(self, input, images):
+    def forward(self, input_maps, images):
         """
         Implements forward pass of encoder
         
         Args:
-            input: Tensor of initial input feature maps of size (batch_size, init_in_channels, init_image_size, init_image_size)
+            input_maps: Tensor of input feature maps of size (batch_size, init_in_channels, init_image_size, init_image_size)
             images: Tensor of images of size (batch_size, image_channels, init_image_size, init_image_size)
             
         Returns:
             out: Array of the outputs of the encoder blocks. 
             The final encoder output has size (batch_size, init_out_channels * 8, init_image_size / 8, init_image_size / 8)
         """
-        layer1_out = self.layer1(input, images)
+        print(self.layer1)
+        layer1_out = self.layer1(input_maps, images)
         images = self.image_pool(images)
         layer2_out = self.layer2(layer1_out, images)
         images = self.image_pool(images)
@@ -100,7 +101,7 @@ class Decoder(nn.Module):
             else:
                 deconv_channels = out_channels
             ml.append(nn.ConvTranspose2d(out_channels, deconv_channels, 2, stride=2))
-        return ml
+        return nn.Sequential(*ml)
     
     def __init__(self, init_out_channels=64, image_channels=3, init_image_size=64, 
                  image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
