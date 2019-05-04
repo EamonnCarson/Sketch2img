@@ -170,7 +170,7 @@ class Decoder(nn.Module):
         images_resized.reverse()
         
         # Concat Gaussian noise to output of encoder
-        noise = torch.randn(encoder_output[0].size())
+        noise = torch.randn(encoder_output[0].size()).to(device)
         out = torch.cat((encoder_output[0], noise), dim=1)
         
         out = self.layer1((out, images_resized[0]))

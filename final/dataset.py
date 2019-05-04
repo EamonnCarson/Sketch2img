@@ -98,9 +98,11 @@ def load_sketchygan_dataset(batch_size):
     
     sketchygan_dataset = SketchyGanDataset(PHOTOS_DIR, SKETCHES_DIR, INFO_DIR, photos_transform=transforms.Compose([
         transforms.ColorJitter(brightness=0.3, contrast=0.2),
+        transforms.Resize((64, 64)),
         transforms.ToTensor(),
         transforms.Normalize(mean=photos_mean, std=np.array([photos_scaling, photos_scaling, photos_scaling]))
     ]), sketches_transform=transforms.Compose([
+        transforms.Resize((64, 64)),
         transforms.ToTensor(),
         InvertTransform(),
         transforms.Normalize(mean=sketches_mean, std=np.array([sketches_scaling, sketches_scaling, sketches_scaling]))

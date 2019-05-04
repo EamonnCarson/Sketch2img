@@ -34,7 +34,7 @@ photo_sketch_dl = None
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 netG = Generator(num_classes=125,
-                 activation=nn.ReLU,
+                 activation=nn.ReLU(),
                  norm=nn.BatchNorm2d,
                  init_out_channels=64,
                  image_channels=3,

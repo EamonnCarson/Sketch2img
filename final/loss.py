@@ -63,8 +63,8 @@ def gan_loss_d(pred_real_natural, pred_fake_natural):
     loss_fake = bce_loss(pred_fake_natural, labels)
     return loss_real + loss_fake
 
-def gradient_penalty(discriminator, real_image_sample, fake_image_sample, lambda_=10, k=1):
-    alpha = torch.rand(real_image_sample.size()[0], 1, 1, 1).expand(real_image_sample.size())
+def gradient_penalty(discriminator, real_image_sample, fake_image_sample, device, lambda_=10, k=1):
+    alpha = torch.rand(real_image_sample.size()[0], 1, 1, 1).expand(real_image_sample.size()).to(device)
     interp = Variable(alpha * real_image_sample + (1 - alpha) * fake_image_sample, requires_grad=True)
     pred_hat, _ = discriminator.forward(interp)
     #pred_hat_natural = pred_hat[1]
