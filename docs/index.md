@@ -4,4 +4,4 @@
 
 Content goes here
 
-![LONG LIVE THE KING](images/kermit.jpeg)
+![LONG LIVE THE KING](images/kermit.jpg)
