@@ -10,7 +10,7 @@ class Discriminator(nn.Module):
                  image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
         super(Discriminator, self).__init__()
         # Use image_channels default value of 3
-        self.encoder = Encoder(num_classes, init_in_channels, init_out_channels=init_out_channels, 
+        self.encoder = Encoder(init_in_channels, init_out_channels=init_out_channels, 
                                init_image_size=init_image_size, image_pool=image_pool, **kwargs)
         self.linear_size = int(init_out_channels * 8 * (init_image_size / 8) ** 2)
         self.fc_dis = nn.Linear(self.linear_size, 1)

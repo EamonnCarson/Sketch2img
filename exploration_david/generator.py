@@ -27,13 +27,12 @@ class Encoder(nn.Module):
             ml.append(nn.Conv2d(out_channels, out_channels, 2, stride=2))  # Halve height and width
         return ml
     
-    def __init__(self, num_classes, init_in_channels, init_out_channels=64, image_channels=3, 
+    def __init__(self, init_in_channels, init_out_channels=64, image_channels=3, 
                  init_image_size=64, image_pool=nn.AvgPool2d(2, stride=2), **kwargs):
         """
         Initialize encoder, consisting of several encoder blocks
         
         Args:
-            num_classes: Number of possible classes
             init_in_channels: The number of channels the initial input feature maps have
             init_out_channels: The number of channels the first encoder block should output
             image_channels: Number of channels for the input images
@@ -206,7 +205,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.label_embeds = nn.Embedding(num_classes, init_image_size ** 2)
         self.init_image_size = init_image_size
-        self.encoder = Encoder(num_classes, 1, init_out_channels=init_out_channels, image_channels=image_channels,
+        self.encoder = Encoder(1, init_out_channels=init_out_channels, image_channels=image_channels,
                                init_image_size=init_image_size, image_pool=image_pool, **kwargs)
         self.decoder = Decoder(init_out_channels=init_out_channels, image_channels=image_channels, 
                                init_image_size=init_image_size, image_pool=image_pool, **kwargs)

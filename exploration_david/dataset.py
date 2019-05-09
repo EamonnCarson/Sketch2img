@@ -2,6 +2,7 @@ import numpy as np
 import os
 import pandas as pd
 import PIL
+import re
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
@@ -21,7 +22,8 @@ class SketchyGanDataset(Dataset):
             d[label] = i
         return d
     
-    def __init__(self, photos_dir, sketches_dir, info_dir, photos_transform=None, sketches_transform=None,
+    def __init__(self, photos_dir, sketches_dir, info_dir, num_categories, train, 
+                 photos_transform=None, sketches_transform=None,
                  remove_error=True, remove_ambiguous=False, remove_pose=False, remove_context=False):
         """
         Initialize the sketches dataset.
@@ -30,6 +32,8 @@ class SketchyGanDataset(Dataset):
             photos_dir (str): directory of photos
             sketches_dir (str): directory of sketches, divided by class
             info_dir (str): directory with additional information about the sketches
+            num_categories (int): Number of categories to use in the dataset
+            train (bool): Whether dataset should be using training or testing data
             remove_error (bool): set to True to remove sketches classified as erroneous
             remove_ambiguous (bool): set to True to remove sketches classified as ambiguous
             remove_pose (bool): set to True to remove sketches drawn from a wrong pose/perspective
@@ -41,8 +45,15 @@ class SketchyGanDataset(Dataset):
         self.labels_id_map = self.generate_labels_id_map()
         self.photos_transform = photos_transform
         self.sketches_transform = sketches_transform
-        self.invalid = [line for line in open(os.path.join(info_dir, 'invalid-error.txt'), 'r')]
         self.stats = pd.read_csv(os.path.join(info_dir, 'stats.csv'))
+        self.stats = self.stats[self.stats['CategoryID'] < num_categories]
+        
+        self.testset = [re.split('/(.*)\.', line)[1] for line in open(os.path.join(info_dir, 'testset.txt'), 'r')]
+        if train:
+            self.stats = self.stats[~self.stats['ImageNetID'].isin(self.testset)]
+        else:
+            self.stats = self.stats[self.stats['ImageNetID'].isin(self.testset)]
+        
         if remove_error:
             self.stats = self.stats.loc[self.stats['Error?'] == 0]
         if remove_ambiguous:
@@ -51,7 +62,7 @@ class SketchyGanDataset(Dataset):
             self.stats = self.stats.loc[self.stats['WrongPose?'] == 0]
         if remove_context:
             self.stats = self.stats.loc[self.stats['Context?'] == 0]
-    
+                
     def __len__(self):
         return len(self.stats)
     
@@ -74,12 +85,14 @@ class SketchyGanDataset(Dataset):
         
         return photo, sketch, self.labels_id_map[class_folder]
     
-def load_sketchygan_dataset(batch_size):
+def load_sketchygan_dataset(batch_size, num_categories, train):
     """
     Loads SketchyGAN dataset inside a DataLoader
     
     Args:
         batch_size: Batch size used by the DataLoader
+        num_categories: Number of categories to use in the dataset
+        train: Whether dataset should be using training or testing data
     """
     npzfile = np.load("dataset_stats.npz")
     photos_mean = npzfile['photos_mean']
@@ -96,16 +109,20 @@ def load_sketchygan_dataset(batch_size):
     SKETCHES_DIR = os.path.join(DATA_DIR, 'sketch', SKETCHES_AUG)
     INFO_DIR = '../learning/datasets/info-06-04/info'
     
-    sketchygan_dataset = SketchyGanDataset(PHOTOS_DIR, SKETCHES_DIR, INFO_DIR, photos_transform=transforms.Compose([
+    photos_transform = transforms.Compose([
         transforms.ColorJitter(brightness=0.3, contrast=0.2),
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=photos_mean, std=np.array([photos_scaling, photos_scaling, photos_scaling]))
-    ]), sketches_transform=transforms.Compose([
+        transforms.Normalize(mean=photos_mean, std=np.array([photos_scaling] * 3))
+    ])
+    sketches_transform = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
         InvertTransform(),
         transforms.Normalize(mean=sketches_mean, std=np.array([sketches_scaling, sketches_scaling, sketches_scaling]))
-    ]))
+    ])
+    
+    sketchygan_dataset = SketchyGanDataset(PHOTOS_DIR, SKETCHES_DIR, INFO_DIR, num_categories, train,
+                                           photos_transform=photos_transform, sketches_transform=sketches_transform)
     dl = DataLoader(sketchygan_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     return sketchygan_dataset, dl
