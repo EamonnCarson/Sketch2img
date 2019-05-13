@@ -36,7 +36,7 @@ For our dataset, we needed pairs of sketches to images, since we need the actual
 
 We ended up using the same dataset as the SketchyGAN paper, which is the [Sketchy database](http://sketchy.eye.gatech.edu/). This dataset is smaller, with around 75,000 sketches for 12,500 photos and a total of 125 categories. However, it crucially has pairs of photos and sketches, which makes this dataset the best choice for our needs.
 
-![Dataset image examples](images/dataset_vis.png)
+![Dataset image examples](./images/dataset_vis.png)
 *Caption: Within each category, each photo has several sketches associated with it.*
 
 Next, we need to clean up our database. The photos and sketches folders contain several subdirectories, each corresponding to a different augmentation. For the photos, we have 2 possible options:
@@ -61,14 +61,14 @@ We removed erroneous sketches, since they have no value and would actively hurt 
 
 ## Image Processing
 
-![Image processing visualization](images/image_process_vis.png)
+![Image processing visualization](./images/image_process_vis.png)
 *Caption: Overview of how we process our photos (top) and sketches (bottom)*
 
 Before feeding our photos and sketches into our GAN, we need to process them properly. For photos, we perform color jittering, which varies the brightness and contrast of the image randomly. For sketches, we invert the colors so that the lines of the sketch are white instead of black, since deep networks prefer areas of importance to have high values.
 
-For both photos and sketches, we resize them from 256x256 to 64x64. This reduces the training time and computation load when training, and it allows to make our output images 64x64 as well, since we are using an architecture similar to a U-Net. We also scale the values down from [0, 255] to [0, 1], before normalizing to [-1, 1].
+For both photos and sketches, we resize them from 256x256 to 64x64. This reduces the training time and computation load when training, and it allows to make our output images 64x64 as well, since we are using an architecture similar to a U-Net. We also scale the values down from $$[0, 255]$$ to $$[0, 1]$$, before normalizing to $$[-1, 1]$$.
 
-Our normalization technique is a bit unconventional. We still center the photos and sketches around the mean. However, we don’t divide by the standard deviation, since this may cause values to go outside the [-1, 1] range. Instead, we calculate the minimum and maximum values in the dataset as datamin and datamax. We then calculate scaling = max(|datamin|, |datamax|), and divide the dataset by scaling instead.
+Our normalization technique is a bit unconventional. We still center the photos and sketches around the mean. However, we don’t divide by the standard deviation, since this may cause values to go outside the $$[-1, 1]$$ range. Instead, we calculate the minimum and maximum values in the dataset as $$\min{data}$$ and $$\max{data}$$. We then calculate $$s = \max(\abs{\min{data}}, \abs{\max{data}})$$, and divide the dataset by $$s$$ instead.
 
 ## MRU
 The MRU (Masked Residual Unit) is the core block of our network. This allows a convolutional network to be repeatedly conditioned on an input image. MRU uses learnable internal masks to extract new features selectively from the input image and combine with the feature maps which are computed in the previous layer. This is similar to attention processes since the MRU can select which regions of the input image to focus on.
@@ -83,7 +83,7 @@ Before introducing the equations, let’s define few notations we are going to u
 - $$1-$$ is element-wise subtraction from $$1$$ (i.e. $$1 - x$$)
 
 First, in order to let MRU decide how much information it wants to preserve from the feature map $$x$$ upon receiving the new image, we creates a mask $$m = \sigma(\textrm{Conv}_{c_x}(x \odot I))$$. We apply this mask to the input feature map $$x$$, concatenate with the image $$I$$.  Then, we apply a convolutional layer and the activation function to get a new feature map: $$z = f(\textrm{Conv}_{f_d}((m \otimes x) \odot I))$$.
-Since we want to dynamically combine the information from the feature map $$z$$ and the original input feature map $$x$$, we create a weight matrix: $$n = \sigma(\textrm{Conv}_{f_d}(x \odot I)) to perform a weighted combination of them: $$y = (1-n) \cdot \textrm{Conv}_{f_d}(x) + n \cdot z$$.
+Since we want to dynamically combine the information from the feature map $$z$$ and the original input feature map $$x$$, we create a weight matrix: $$n = \sigma(\textrm{Conv}_{f_d}(x \odot I))$$ to perform a weighted combination of them: $$y = (1-n) \cdot \textrm{Conv}_{f_d}(x) + n \cdot z$$.
 After each 3x3 convolutional layer, normalizations can be applied. For example, in the generator, the conditional batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ (non-mask layers). In the discriminator, spectral normalization is applied after all convolutional layers and batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ again for non-mask layers.
 The equations can be summarized as below:
 $$
