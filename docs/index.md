@@ -3,7 +3,7 @@
 ##### Authors: David Wang, Danny Kim, Eamonn Carson, Kyle Kovach
 
 <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-\[
+$$
 \newcommand{\given}[1][]{\:#1\vert\:}
 \newcommand{\Prob}[1]{\mathbb{P}\left( #1 \right)}
 \newcommand{\Var}{\mathrm{Var}}
@@ -27,7 +27,7 @@
         #1 
     \end{pmatrix}
 }
-\]
+$$
 
 Content goes here
 
