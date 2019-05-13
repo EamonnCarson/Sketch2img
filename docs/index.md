@@ -73,7 +73,6 @@ Our normalization technique is a bit unconventional. We still center the photos 
 ## MRU
 
 ![MRU block diagram](./images/mru_diagram.png)
-*Caption: Overview of how we process our photos (top) and sketches (bottom)*
 
 The MRU (Masked Residual Unit) is the core block of our network. This allows a convolutional network to be repeatedly conditioned on an input image. MRU uses learnable internal masks to extract new features selectively from the input image and combine with the feature maps which are computed in the previous layer. This is similar to attention processes since the MRU can select which regions of the input image to focus on.
 The above figure shows the structure of MRU. It takes a feature map $$x$$ and an image $$I$$ as inputs, and outputs a feature map $$y$$. The input feature map $$x$$ is either the output from the previous layer or initial input to the network (which is a class label embedded into an image; the embedding is learned). In the generator image $$I$$ is the sketch (so that the generator can reference the sketch while it generates an image). In the discriminator the image $$I$$ is the sketch concatenated with the input image (so that the discriminator can reference the sketch and input image while deciding if the input image is fake).
@@ -87,7 +86,7 @@ Before introducing the equations, let’s define few notations we are going to u
 - $$1-$$ is element-wise subtraction from $$1$$ (i.e. $$1 - x$$)
 
 First, in order to let MRU decide how much information it wants to preserve from the feature map $$x$$ upon receiving the new image, we creates a mask $$m = \sigma(\textrm{Conv}_{c_x}(x \odot I))$$. We apply this mask to the input feature map $$x$$, concatenate with the image $$I$$.  Then, we apply a convolutional layer and the activation function to get a new feature map: $$z = f(\textrm{Conv}_{f_d}((m \otimes x) \odot I))$$.
-Since we want to dynamically combine the information from the feature map $$z$$ and the original input feature map $$x$$, we create a weight matrix: $$n = \sigma(\textrm{Conv}_{f_d}(x \odot I))$$ to perform a weighted combination of them: $$y = (1-n) \cdot \textrm{Conv}_{f_d}(x) + n \cdot z$$.
+Since we want to dynamically combine the information from the feature map $$z$$ and the original input feature map $$x$$, we create a weight matrix: $$n = \sigma(\textrm{Conv}_{f_d}(x \odot I))$$ to perform a weighted combination of them: $$y = (1-n) \otimes \textrm{Conv}_{f_d}(x) + n \otimes z$$.
 After each 3x3 convolutional layer, normalizations can be applied. For example, in the generator, the conditional batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ (non-mask layers). In the discriminator, spectral normalization is applied after all convolutional layers and batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ again for non-mask layers.
 The equations can be summarized as below:
 
@@ -96,7 +95,7 @@ $$
 m &= \sigma(\textrm{Conv}_{c_x}(x \odot I)) \\
 n &= \sigma(\textrm{Conv}_{f_d}(x \odot I)) \\
 z &= f(\textrm{Conv}_{f_d}((m \otimes x) \odot  I)) \\
-y &= (1-n) \cdot \textrm{Conv}_{f_d}(x) + n \cdot z \\
+y &= (1-n) \otimes \textrm{Conv}_{f_d}(x) + n \otimes z \\
 \end{align*}
 $$
 
@@ -109,10 +108,10 @@ $$ L(G) = L_\textrm{GAN}(G) - L_{AC}(G) + L_\textrm{sup}(G) + L_{p}(G) + L_\text
         
 $$ L_\textrm{GAN}(D, G) = \mathrm{E}_{Y \sim P_{image}}\left[ \log D(y) \right] + \mathrm{E}_{Y \sim P_{sketch},\, z \sim P_z}\left[ \log (1 - D(G(x,z)) \right] $$
 
-$$ L_\textrm{AC} = \Expect{\log P\left(C = c \given y \right) $$
+$$ L_\textrm{AC} = \Expect{\log P\left(C = c \given y \right)} $$
 
-$$ L_\textrm{sup} = \norm{G(x, z) - y_1 $$
+$$ L_\textrm{sup} = \norm{G(x, z) - y_1} $$
 
-$$ L_\textrm{p} = \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)_1 $$
+$$ L_\textrm{p} = \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)_1 } $$
 
-$$ L_\textrm{div} = -\lambda_{div} \norm{G(x, z_1) - G(x, z_2)_1 $$
+$$ L_\textrm{div} = -\lambda_{div} \norm{G(x, z_1) - G(x, z_2)_1 } $$
