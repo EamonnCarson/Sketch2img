@@ -1,2 +1,4 @@
 theme: jekyll-theme-cayman
 title: Bringing Sketches to Life with GANs
+markdown: kramdown
+#use_math: true
