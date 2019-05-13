@@ -34,6 +34,89 @@ Content goes here
 
 $$ hello $$
 
-$$ \E{36} $$
+$$ 
+\begin{align*}
+    L(D) &= 
+        L_{\textnormal{GAN}}(D, G) 
+        + L_{\textnormal{AC}}(D)
+    \\
+    L(G) &= 
+        L_{\textnormal{GAN}}(G) 
+        - L_{\textnormal{AC}}(G)
+        + L_{\textnormal{sup}}(G)
+        + L_{\textnormal{p}}(G)
+        + L_{\textnormal{div}}(G)
+        \\
+        &
+        \\
+    L_{\textnormal{GAN}}(D, G) &= 
+    \mathrm{E}_{Y \sim P_{\textnormal{image}}}\left[ \log D(y) \right]
+    + \mathrm{E}_{Y \sim P_{\textnormal{sketch}},\, z \sim P_z}\left[ \log (1 - D(G(x,z)) \right]
+    \\
+    L_{\textnormal{AC}} &= \Expect{\log P\left(C = c \given y \right)}
+    \\
+    L_{\textnormal{sup}} &= \norm{G(x, z) - y}_1
+    \\
+    L_{\textnormal{p}} &= \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)}_1
+    \\
+    L_{\textnormal{div}} &= -\lambda_{\textnormal{div}} \norm{G(x, z_1) - G(x, z_2)}_1
+    \\
+\end{align*}
+$$
 
-![LONG LIVE THE KING](images/kermit.jpg)
+\begin{align*}
+    L(D) &= 
+        L_{\textnormal{GAN}}(D, G) 
+        + L_{\textnormal{AC}}(D)
+    \\
+    L(G) &= 
+        L_{\textnormal{GAN}}(G) 
+        - L_{\textnormal{AC}}(G)
+        + L_{\textnormal{sup}}(G)
+        + L_{\textnormal{p}}(G)
+        + L_{\textnormal{div}}(G)
+        \\
+        &
+        \\
+    L_{\textnormal{GAN}}(D, G) &= 
+    \mathrm{E}_{Y \sim P_{\textnormal{image}}}\left[ \log D(y) \right]
+    + \mathrm{E}_{Y \sim P_{\textnormal{sketch}},\, z \sim P_z}\left[ \log (1 - D(G(x,z)) \right]
+    \\
+    L_{\textnormal{AC}} &= \Expect{\log P\left(C = c \given y \right)}
+    \\
+    L_{\textnormal{sup}} &= \norm{G(x, z) - y}_1
+    \\
+    L_{\textnormal{p}} &= \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)}_1
+    \\
+    L_{\textnormal{div}} &= -\lambda_{\textnormal{div}} \norm{G(x, z_1) - G(x, z_2)}_1
+    \\
+\end{align*}
+
+\[\begin{align*}
+    L(D) &= 
+        L_{\textnormal{GAN}}(D, G) 
+        + L_{\textnormal{AC}}(D)
+    \\
+    L(G) &= 
+        L_{\textnormal{GAN}}(G) 
+        - L_{\textnormal{AC}}(G)
+        + L_{\textnormal{sup}}(G)
+        + L_{\textnormal{p}}(G)
+        + L_{\textnormal{div}}(G)
+        \\
+        &
+        \\
+    L_{\textnormal{GAN}}(D, G) &= 
+    \mathrm{E}_{Y \sim P_{\textnormal{image}}}\left[ \log D(y) \right]
+    + \mathrm{E}_{Y \sim P_{\textnormal{sketch}},\, z \sim P_z}\left[ \log (1 - D(G(x,z)) \right]
+    \\
+    L_{\textnormal{AC}} &= \Expect{\log P\left(C = c \given y \right)}
+    \\
+    L_{\textnormal{sup}} &= \norm{G(x, z) - y}_1
+    \\
+    L_{\textnormal{p}} &= \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)}_1
+    \\
+    L_{\textnormal{div}} &= -\lambda_{\textnormal{div}} \norm{G(x, z_1) - G(x, z_2)}_1
+    \\
+\end{align*}\]
+
