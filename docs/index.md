@@ -86,6 +86,7 @@ First, in order to let MRU decide how much information it wants to preserve from
 Since we want to dynamically combine the information from the feature map $$z$$ and the original input feature map $$x$$, we create a weight matrix: $$n = \sigma(\textrm{Conv}_{f_d}(x \odot I))$$ to perform a weighted combination of them: $$y = (1-n) \cdot \textrm{Conv}_{f_d}(x) + n \cdot z$$.
 After each 3x3 convolutional layer, normalizations can be applied. For example, in the generator, the conditional batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ (non-mask layers). In the discriminator, spectral normalization is applied after all convolutional layers and batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ again for non-mask layers.
 The equations can be summarized as below:
+
 $$
 \begin{align*}
 m &= \sigma(\textrm{Conv}_{c_x}(x \odot I)) \\
