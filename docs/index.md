@@ -52,6 +52,7 @@ For the sketches, we have 6 possible options:
 - tx_000000001110: sketch is centered on bounding box and is non-uniformly scaled such that it completely fits within the bounding box
 
 We ultimately decided to go with the bolded options above, since these best preserved the original aspect ratio of the photos and sketches. Furthermore, since the augmentations used the object bounding box, the images did not have as much extraneous detail in the background or sides of the image.
+
 Furthermore, the Sketchy database provides additional info and annotations, which specify the validity of the sketches. There are four different types of "incorrect" sketches:
 - Error - Something is very wrong with the sketch. It may be completely incorrect and/or a squiggle.
 - Ambiguous - The reviewer deemed the sketch too poor quality to identify as the subject object. However, these sketches may still approximate the correct shape and/or pose.
@@ -75,8 +76,11 @@ Our normalization technique is a bit unconventional. We still center the photos 
 ![MRU block diagram](./images/mru_diagram.png)
 
 The MRU (Masked Residual Unit) is the core block of our network. This allows a convolutional network to be repeatedly conditioned on an input image. MRU uses learnable internal masks to extract new features selectively from the input image and combine with the feature maps which are computed in the previous layer. This is similar to attention processes since the MRU can select which regions of the input image to focus on.
+
 The above figure shows the structure of MRU. It takes a feature map $$x$$ and an image $$I$$ as inputs, and outputs a feature map $$y$$. The input feature map $$x$$ is either the output from the previous layer or initial input to the network (which is a class label embedded into an image; the embedding is learned). In the generator image $$I$$ is the sketch (so that the generator can reference the sketch while it generates an image). In the discriminator the image $$I$$ is the sketch concatenated with the input image (so that the discriminator can reference the sketch and input image while deciding if the input image is fake).
+
 The feature map $$x$$ has dimensions $$(c_x \times h \times w)$$, the image $$I$$ has dimensions $$(c_i \times h \times w)$$, and the output feature map $$y$$ has the dimensions $$(f_d \times h \times w)$$.
+
 Before introducing the equations, let’s define few notations we are going to use:
 - $$a \odot b$$ is concatenation of $$a$$ and $$b$$ along the channel axis
 - $$\otimes$$ is element-wise multiplication
@@ -86,7 +90,9 @@ Before introducing the equations, let’s define few notations we are going to u
 - $$1-$$ is element-wise subtraction from $$1$$ (i.e. $$1 - x$$)
 
 First, in order to let MRU decide how much information it wants to preserve from the feature map $$x$$ upon receiving the new image, we creates a mask $$m = \sigma(\textrm{Conv}_{c_x}(x \odot I))$$. We apply this mask to the input feature map $$x$$, concatenate with the image $$I$$.  Then, we apply a convolutional layer and the activation function to get a new feature map: $$z = f(\textrm{Conv}_{f_d}((m \otimes x) \odot I))$$.
+
 Since we want to dynamically combine the information from the feature map $$z$$ and the original input feature map $$x$$, we create a weight matrix: $$n = \sigma(\textrm{Conv}_{f_d}(x \odot I))$$ to perform a weighted combination of them: $$y = (1-n) \otimes \textrm{Conv}_{f_d}(x) + n \otimes z$$.
+
 After each 3x3 convolutional layer, normalizations can be applied. For example, in the generator, the conditional batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ (non-mask layers). In the discriminator, spectral normalization is applied after all convolutional layers and batch normalization is applied after the convolutional layers in $$z$$ and $$y$$ again for non-mask layers.
 The equations can be summarized as below:
 
@@ -101,17 +107,47 @@ $$
 
 
 
+# Explanation of Losses
+Let $$x$$ be the sketch, $$y$$ be the corresponding real image, $$z$$ be a noise, and $$c$$ be a class label. 
 
-$$ L(D) = L_\textrm{GAN}(D, G) + L_\textrm{AC}(D) $$
+Our first loss function is the generic GAN loss (which is binary cross entropy loss for the discriminator’s classification of images as real or fake):
 
-$$ L(G) = L_\textrm{GAN}(G) - L_{AC}(G) + L_\textrm{sup}(G) + L_{p}(G) + L_\textrm{div}(G) $$
-        
 $$ L_\textrm{GAN}(D, G) = \mathrm{E}_{Y \sim P_{image}}\left[ \log D(y) \right] + \mathrm{E}_{Y \sim P_{sketch},\, z \sim P_z}\left[ \log (1 - D(G(x,z)) \right] $$
 
-$$ L_\textrm{AC} = \Expect{\log P\left(C = c \given y \right)} $$
+This loss incentivizes the discriminator to correctly classify real images as being real, and fake images as being fake. Alternatively, the objective of generator is to maximize the the second term (i.e. to fool the discriminator). When we are using it to optimize the generator we use the notation LGAN(G) to emphasize that the discriminator is held constant.
+
+The second loss function is an auxiliary classification loss (which is cross entropy loss for the discriminator’s classification of the content of an image: i.e. is this image of a cat or a dog?):
+
+$$ L_\textrm{AC}(D) = \Expect{\log P\left(C = c \given y \right)} $$
+
+This loss incentivizes the discriminator to correctly classify the subject of images, the hope being that this loss will incentivize the discriminator to learn important image features sooner. We also propagate this loss to the generator so that it is incentivized to produce images that are recognizably of a certain class. To clarify that we propagate to the generator, we denote this loss $$L_\textrm{AC}(G)$$ when it is applied to the generator.
+
+The third loss function is DRAGAN loss $$L_\textrm{dragan}(D)$$, which is used to avoid mode collapse. For more details see ![the DRAGAN paper](https://arxiv.org/abs/1705.07215). This loss applied to the discriminator as per the DRAGAN paper.
+
+The fourth loss function is supervised loss (just a L1 distance between the generated and ground-truth images):
 
 $$ L_\textrm{sup} = \norm{G(x, z) - y_1} $$
 
+This loss simply motivates the generator to produce images that are pixel-by-pixel similar to the real ones. It is unwise to use this loss alone, since the L1 distance also measures the difference between backgrounds and other irrelevant parts of the image.
+
+Our fifth loss function is a perceptual loss which measures the L1 distance between the generated and ground-truth image within the embedded space of the activations of the layers of the inception-v4 model:
+
 $$ L_\textrm{p} = \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)_1 } $$
 
+Where $$\phi_i(a)$$ is the layer activation of layer $$i$$ of the inception-v4 model when given the input $$a$$. This loss serves to measure the ‘perceptual’ difference between the content of the generated image and the content of the ground-truth image. Hence this loss encourages the generator to create images whose important features (determined by the inception-v4) match those of the ground-truth image.
+
+The final loss we use is a diversity loss which computes the output of the generator for two different $$N(0, 1)$$ noise vectors $$z_1$$ and $$z_2$$, and computes the negative slope between them:
+
 $$ L_\textrm{div} = -\lambda_{div} \norm{G(x, z_1) - G(x, z_2)_1 } $$
+
+The purpose of this loss is to encourage the generator to have high diversity in its output images (and it does so by rewarding the generator for having a high local rate of change).
+
+All in all the loss for the discriminator is
+
+$$ L(D) = L_\textrm{GAN}(D, G) + L_\textrm{AC}(D) $$
+
+And the loss for the generator is
+
+$$ L(G) = L_\textrm{GAN}(G) - L_{AC}(G) + L_\textrm{sup}(G) + L_{p}(G) + L_\textrm{div}(G) $$
+
+Both of these losses should be minimized.
