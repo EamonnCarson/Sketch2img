@@ -132,19 +132,21 @@ This loss simply motivates the generator to produce images that are pixel-by-pix
 
 Our fifth loss function is a perceptual loss which measures the L1 distance between the generated and ground-truth image within the embedded space of the activations of the layers of the inception-v4 model:
 
-$$ L_\textrm{p} = \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)_1 } $$
+$$ L_\textrm{p} = \sum_{i} \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)_1 } $$
 
 Where $$\phi_i(a)$$ is the layer activation of layer $$i$$ of the inception-v4 model when given the input $$a$$. This loss serves to measure the ‘perceptual’ difference between the content of the generated image and the content of the ground-truth image. Hence this loss encourages the generator to create images whose important features (determined by the inception-v4) match those of the ground-truth image.
 
 The final loss we use is a diversity loss which computes the output of the generator for two different $$N(0, 1)$$ noise vectors $$z_1$$ and $$z_2$$, and computes the negative slope between them:
 
-$$ L_\textrm{div} = -\lambda_{div} \norm{G(x, z_1) - G(x, z_2)_1 } $$
+$$ L_\textrm{div} = - \norm{G(x, z_1) - G(x, z_2)_1 } $$
 
 The purpose of this loss is to encourage the generator to have high diversity in its output images (and it does so by rewarding the generator for having a high local rate of change).
 
+Furthermore, to each of these losses we multiply hyperparameters/weights. For our most successful run, we kept all weights at 1 except for the DRAGAN loss, where we used a weight of 10 and an internal hyperparameter $$k = 1$$ (see ![the tensorflow implementation of DRAGAN](https://github.com/kodalinaveen3/DRAGAN) for more details).
+
 All in all the loss for the discriminator is
 
-$$ L(D) = L_\textrm{GAN}(D, G) + L_\textrm{AC}(D) $$
+$$ L(D) = L_\textrm{GAN}(D, G) + L_\textrm{AC}(D) + 10 L_\textrm{dragan}(D)$$
 
 And the loss for the generator is
 
