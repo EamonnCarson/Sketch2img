@@ -1,6 +1,6 @@
 # Final Project: Sketch2Img
 ##### CS 182: Neural Networks, Spring 2019
-##### Authors: David Wang, Danny Kim, Eamonn Carson, Kyle Kovach
+##### Authors: David Wang, Dongsub Kim, Eamonn Carson, Kyle Kovach
 
 <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 $$
@@ -71,6 +71,10 @@ For both photos and sketches, we resize them from 256x256 to 64x64. This reduces
 Our normalization technique is a bit unconventional. We still center the photos and sketches around the mean. However, we don’t divide by the standard deviation, since this may cause values to go outside the $$[-1, 1]$$ range. Instead, we calculate the minimum and maximum values in the dataset as $$\min{data}$$ and $$\max{data}$$. We then calculate $$s = \max(\abs{\min{data}}, \abs{\max{data}})$$, and divide the dataset by $$s$$ instead.
 
 ## MRU
+
+![MRU block diagram](./images/mru_diagram.png)
+*Caption: Overview of how we process our photos (top) and sketches (bottom)*
+
 The MRU (Masked Residual Unit) is the core block of our network. This allows a convolutional network to be repeatedly conditioned on an input image. MRU uses learnable internal masks to extract new features selectively from the input image and combine with the feature maps which are computed in the previous layer. This is similar to attention processes since the MRU can select which regions of the input image to focus on.
 The above figure shows the structure of MRU. It takes a feature map $$x$$ and an image $$I$$ as inputs, and outputs a feature map $$y$$. The input feature map $$x$$ is either the output from the previous layer or initial input to the network (which is a class label embedded into an image; the embedding is learned). In the generator image $$I$$ is the sketch (so that the generator can reference the sketch while it generates an image). In the discriminator the image $$I$$ is the sketch concatenated with the input image (so that the discriminator can reference the sketch and input image while deciding if the input image is fake).
 The feature map $$x$$ has dimensions $$(c_x \times h \times w)$$, the image $$I$$ has dimensions $$(c_i \times h \times w)$$, and the output feature map $$y$$ has the dimensions $$(f_d \times h \times w)$$.
@@ -91,7 +95,7 @@ $$
 \begin{align*}
 m &= \sigma(\textrm{Conv}_{c_x}(x \odot I)) \\
 n &= \sigma(\textrm{Conv}_{f_d}(x \odot I)) \\
-z &= f(\textrm{Conv}_{f_d}((m \otimes x) \odot  I])) \\
+z &= f(\textrm{Conv}_{f_d}((m \otimes x) \odot  I)) \\
 y &= (1-n) \cdot \textrm{Conv}_{f_d}(x) + n \cdot z \\
 \end{align*}
 $$
@@ -99,16 +103,16 @@ $$
 
 
 
-$$ L(D) = L_{GAN}(D, G) + L_{AC}(D) $$
+$$ L(D) = L_\textrm{GAN}(D, G) + L_\textrm{AC}(D) $$
 
-$$ L(G) = L_{GAN}(G) - L_{AC}(G) + L_{sup}(G) + L_{p}(G) + L_{div}(G) $$
+$$ L(G) = L_\textrm{GAN}(G) - L_{AC}(G) + L_\textrm{sup}(G) + L_{p}(G) + L_\textrm{div}(G) $$
         
-$$ L_{GAN}(D, G) = \mathrm{E}_{Y \sim P_{image}}\left[ \log D(y) \right] + \mathrm{E}_{Y \sim P_{sketch}},\, z \sim P_z\left[ \log (1 - D(G(x,z)) \right] $$
+$$ L_\textrm{GAN}(D, G) = \mathrm{E}_{Y \sim P_{image}}\left[ \log D(y) \right] + \mathrm{E}_{Y \sim P_{sketch},\, z \sim P_z}\left[ \log (1 - D(G(x,z)) \right] $$
 
-$$ L_{AC} = \Expect{\log P\left(C = c \given y \right) $$
+$$ L_\textrm{AC} = \Expect{\log P\left(C = c \given y \right) $$
 
-$$ L_{sup} = \norm{G(x, z) - y_1 $$
+$$ L_\textrm{sup} = \norm{G(x, z) - y_1 $$
 
-$$ L_{p} = \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)_1 $$
+$$ L_\textrm{p} = \sum_{i} \lambda_p \norm{\phi_i\left( G(x,z) \right) - \phi_i\left( y \right)_1 $$
 
-$$ L_{div} = -\lambda_{div} \norm{G(x, z_1) - G(x, z_2)_1 $$
+$$ L_\textrm{div} = -\lambda_{div} \norm{G(x, z_1) - G(x, z_2)_1 $$
