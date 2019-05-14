@@ -251,7 +251,7 @@ One of the hardest lessons we learned is that GANs are very difficult to train. 
 # Team Contributions
 - Dongsub Kim : I implemented the code for the MRU block, generator class, discriminator class and overall training process on Google Colab. I made visualizations of images and losses for the poster. For the final blogpost, I wrote the MRU, generator, discriminator and results sections (25%)
 - David Wang : I wrote the code to clean up, process, and load the dataset. I also wrote the majority of the code for the MRU unit, encoder, decoder, generator, and discriminator. For the poster, I contributed the MRU diagram and the dataset section. For the blog post, I wrote the dataset and image processing sections. (33%)
-- Eamonn Carson : I implemented discriminator losses, created the overall network diagram (on poster/final-blogpost), wrote the explanation of losses (on final-blogpost), trained the GAN (on 25 classes), debugged the sign of losses for GAN training, and converted the final report to markdown and $$\latex$$ (25%)
+- Eamonn Carson : I implemented discriminator losses, created the overall network diagram (on poster/final-blogpost), wrote the explanation of losses (on final-blogpost), trained the GAN (on 25 classes), debugged the sign of losses for GAN training, and converted the final report to markdown and $$\LaTeX$$ (25%)
 - Kyle Kovach : I implemented the code for the generator loss function, and implemented code for each term into its own method. I also wrote the explanations for each term of the loss functions on the project poster. For the final blog post, I wrote abstract, along with the problem statement and background sections.  (17%)
 
 ## References
