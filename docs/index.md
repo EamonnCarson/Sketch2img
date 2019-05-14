@@ -201,6 +201,59 @@ $$ L(G) = L_\textrm{GAN}(G) - L_{AC}(G) + L_\textrm{sup}(G) + L_{p}(G) + L_\text
 
 Both of these losses should be minimized.
 
+## Results
+
+Our first model was trained with a discriminator learning rate of 0.0002 and generator learning rate of 0.0001, with batch size 16. We used the entire dataset which contains 125 classes and 75,000 sketches. Training one epoch roughly takes 12 hours on Google Colab with a GPU.
+
+The model seems to improve over the first epoch. The generated images from the first epoch are shown below. It shows how the generator is improved from top-left to bottom-right.
+
+![Results from a previous less effective model](./images/combined_fourth_run_max_sample2320_20x4.png)
+
+It started with a pure noise, but gradually learned the structure of the sketch and distinguish the sketch from the background. However, it has grid-shape of noise and very blurry.
+
+The losses of the generator and discriminator for the first epoch is shown below.
+
+![Discriminator vs Generator Loss](./images/losses.png)
+
+The accuracy graph of the discriminator for the real inputs is shown below. The discriminator tries to predict the input images’ class label out of 125 classes.
+
+![Classification accuracy of the discriminator](./images/acc.png)
+
+The classification accuracy improved a lot considering that it has to predict a class out of 125 classes.
+
+However, after the first epoch, the generator starts to output black images regardless of the sketches it takes as shown below. Therefore, we stopped training this model and made changes.
+
+![Degenerate results](./images/after0epoch.png)
+
+First, we fixed a bug in the loss. We also used only 10 categories so that training was faster, and we switched from batch normalization to conditional batch normalization [4] in the generator. We trained with roughly the same learning rates for 20 epochs. Our images did not have the same problem of outputting black like the last model. However, the images generated were still pretty blurry, though some categories performed much better than others.
+
+![Generated armor](./images/out_armor.png)
+![Generated apple](./images/out_apple.png)
+![Generated alarm](./images/out_alarm.png)
+![Generated banana](./images/out_banana.png)
+*Caption: Examples of the better categories with our modified model. These include armor (left), apple (middle left), alarm clock (middle right), and banana (right)*
+
+![Generated ant](./images/out_ant.png)
+![Generated bear](./images/out_bear.png)
+*Caption: Examples of categories that didn’t perform so well. These include ant (left) and bear (right)*
+
+We also tried another model where the generator takes in processed sketches instead of embedded labels. We converted the sketch to have 8 channel dimensions using an additional convolutional layer. This seemed to reduce the blurriness of the images a little bit, since some semblance of the sketch could be seen in the generated images.
+
+![Generated airplane](./images/out_airplane1.png)
+![Alternate generated airplane](./images/out_airplane2.png)
+*Caption: Example of some generated airplane images after feeding in sketches instead of labels to the generator.*
+
+We also attempted some additional changes mentioned in [this article](https://medium.com/@utk.is.here/keep-calm-and-train-a-gan-pitfalls-and-tips-on-training-generative-adversarial-networks-edd529764aa9), such as flipping the labels and implementing soft and noisy labels. Unfortunately, we did not see significant improvement with these changes.
+
+# Lessons Learned
+One of the hardest lessons we learned is that GANs are very difficult to train. Our overall results could not reach the sharpness that the SketchyGAN paper was able to due to time constraints, and it is unlikely that our model will be able to produce images for our intended purpose of art asset creation. However, we were able to get the model to produce recognizable, though blurry, images for a few classes.
+
+# Team Contributions
+- Dongsub Kim : I implemented the code for the MRU block, generator class, discriminator class and overall training process on Google Colab. I made visualizations of images and losses for the poster. For the final blogpost, I wrote the MRU, generator, discriminator and results sections (25%)
+- David Wang : I wrote the code to clean up, process, and load the dataset. I also wrote the majority of the code for the MRU unit, encoder, decoder, generator, and discriminator. For the poster, I contributed the MRU diagram and the dataset section. For the blog post, I wrote the dataset and image processing sections. (33%)
+- Eamonn Carson : I implemented discriminator losses, created the overall network diagram (on poster/final-blogpost), wrote the explanation of losses (on final-blogpost), trained the GAN (on 25 classes), debugged the sign of losses for GAN training, and converted the final report to markdown and $$\latex$$ (25%)
+- Kyle Kovach : I implemented the code for the generator loss function, and implemented code for each term into its own method. I also wrote the explanations for each term of the loss functions on the project poster. For the final blog post, I wrote abstract, along with the problem statement and background sections.  (17%)
+
 ## References
 1. Wengling Chen, James Hays. SketchyGAN: Towards Diverse and Realistic Sketch to Image Synthesis https://arxiv.org/abs/1801.02753
 2. Jacob Abernethy, James Hays, Zsolt Kira. On Convergence and Stability of GANs, https://arxiv.org/abs/1705.07215
