@@ -29,6 +29,8 @@ $$
 }
 $$
 
+Canary
+
 # Abstract
 
 The motivation of Sketch2Img is to accelerate prototyping and creation of original art assets by turning low effort drawings into realistic photographs. Sketch2Img utilizes a generative adversarial network (GAN) in order to generate realistic images from input sketches. The architecture largely follows the SketchyGAN paper, but we bolster the discriminator by providing it with the input sketches, in addition to the real and fake images. Although we were not able to create photo-realistic images, some of the ones we created are somewhat recognizable as blurry photos of classes they represent.
@@ -129,12 +131,12 @@ The generator uses an encoder-decoder structure. Both the encoder and the decode
 
 Also, there are skip-connections between the encoder and decoder blocks. The output feature maps from the MRU of the encoder block are concatenated (along the channel dimension) to the output of the corresponding decoder block after the deconvolutional layer
 
-![Generator encoder block architecture](./images/Encoder.png)
+![Generator encoder block architecture](./images/encoder.png)
 *Caption: architecture of the generator's encoder block*
 
 In the encoder block, the MRU doubles the channel dimensions while keeping the height and width dimensions of the feature maps and the convolutional layer halves the height and width dimensions while keeping the channel dimension.
 
-![Generator decoder block architecture](./images/Decoder.png)
+![Generator decoder block architecture](./images/decoder.png)
 *Caption: architecture of the generator's decoder block*
 
 Note that between the encoder and the decoder, noise is concatenated to the output of the encoder in order to encourage diversity between generated images.
@@ -143,7 +145,7 @@ In the decoder block, both the MRU and the deconvolutional layers halve the chan
 
 ## Discriminator 
 
-![Discriminator architecture](./images/Discriminator.png)
+![Discriminator architecture](./images/discriminator.png)
 *Caption: architecture of the discriminator*
 
 The discriminator has the same structure as the encoder from the generator. The discriminator takes one input which is a concatenated image of a real or fake image and a corresponding sketch.
