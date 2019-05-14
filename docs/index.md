@@ -29,8 +29,6 @@ $$
 }
 $$
 
-Canary
-
 # Abstract
 
 The motivation of Sketch2Img is to accelerate prototyping and creation of original art assets by turning low effort drawings into realistic photographs. Sketch2Img utilizes a generative adversarial network (GAN) in order to generate realistic images from input sketches. The architecture largely follows the SketchyGAN paper, but we bolster the discriminator by providing it with the input sketches, in addition to the real and fake images. Although we were not able to create photo-realistic images, some of the ones we created are somewhat recognizable as blurry photos of classes they represent.
