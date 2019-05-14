@@ -29,14 +29,19 @@ $$
 }
 $$
 
+# Abstract
+
+The motivation of Sketch2Img is to accelerate prototyping and creation of original art assets by turning low effort drawings into realistic photographs. Sketch2Img utilizes a generative adversarial network (GAN) in order to generate realistic images from input sketches. The architecture largely follows the SketchyGAN paper, but we bolster the discriminator by providing it with the input sketches, in addition to the real and fake images. Although we were not able to create photo-realistic images, some of the ones we created are somewhat recognizable as blurry photos of classes they represent.
+
+
 # Problem Statement and Background
-The motivation of Sketch2Img is to accelerate prototyping and creation of original art assets by creating realistic, photo-quality images from low-effort drawings. The sketches used for training of the network reflect this: they are line drawings that mostly show the outlines of objects rather than the details that we wish to be present in the final images produced. 
+Since the goal of Sketch2img is to allow artists to go from crude sketches to realistic images quickly and with minimal effort, the sketches used for training of the network reflect this: they are line drawings that mostly show the outlines of objects rather than the details that we wish to be present in the final images produced. 
 
 Our plan was to assess the quality of our model by inspecting the images it produces on our own--after all, if the goal is to produce images that trick humans into believing they were taken with a camera, a human-centric approach to determine its effectiveness would be best. 
 
 If the images produced by our model could be realistic enough, it could be used by artists looking to save time or effort, and open up whole new avenues of prototyping paths for designers. Imagine being able to go from a new visual idea to an image of what that idea would look like in real life, by simply sketching it out and uploading it to our model. This could enable people to perfect their concepts much quicker, removing the bottleneck of the entire prototyping process. 
 
-Sketch2Img utilizes a generative adversarial network (GAN) in order to generate realistic-looking images from those input sketches. The architecture largely follows [the SketchyGAN paper](https://arxiv.org/pdf/1801.02753.pdf), but we bolster the discriminator by providing it with the input sketches, in addition to the real and fake images. 
+what that idea would look like in real life, by simply sketching it out and uploading it to our model. This could enable people to perfect their concepts much quicker, removing the bottleneck of the entire prototyping process. 
 
 # Approach
 ## Dataset
@@ -116,7 +121,7 @@ $$
 
 ## GAN
 
-![Overall network architecture](./images/architecture.png)
+![Overall network architecture](./images/GAN.png)
 *Caption: Overall structure of the network*
 
 ## Generator
@@ -124,12 +129,12 @@ The generator uses an encoder-decoder structure. Both the encoder and the decode
 
 Also, there are skip-connections between the encoder and decoder blocks. The output feature maps from the MRU of the encoder block are concatenated (along the channel dimension) to the output of the corresponding decoder block after the deconvolutional layer
 
-![Generator encoder block architecture](./images/encoder.png)
+![Generator encoder block architecture](./images/Encoder.png)
 *Caption: architecture of the generator's encoder block*
 
 In the encoder block, the MRU doubles the channel dimensions while keeping the height and width dimensions of the feature maps and the convolutional layer halves the height and width dimensions while keeping the channel dimension.
 
-![Generator decoder block architecture](./images/decoder.png)
+![Generator decoder block architecture](./images/Decoder.png)
 *Caption: architecture of the generator's decoder block*
 
 Note that between the encoder and the decoder, noise is concatenated to the output of the encoder in order to encourage diversity between generated images.
@@ -138,7 +143,7 @@ In the decoder block, both the MRU and the deconvolutional layers halve the chan
 
 ## Discriminator 
 
-![Discriminator architecture](./images/discriminator.png)
+![Discriminator architecture](./images/Discriminator.png)
 *Caption: architecture of the discriminator*
 
 The discriminator has the same structure as the encoder from the generator. The discriminator takes one input which is a concatenated image of a real or fake image and a corresponding sketch.
@@ -200,4 +205,6 @@ Both of these losses should be minimized.
 1. Wengling Chen, James Hays. SketchyGAN: Towards Diverse and Realistic Sketch to Image Synthesis https://arxiv.org/abs/1801.02753
 2. Jacob Abernethy, James Hays, Zsolt Kira. On Convergence and Stability of GANs, https://arxiv.org/abs/1705.07215
 3. T. Salimans, I. Goodfellow, W. Zaremba, V. Cheung, A. Radford, and X. Chen. Improved techniques for training gans. In Advances in Neural Information Processing Systems, pages 2234–2242, 2016.
+4. V. Dumoulin, J. Shlens, and M. Kudlur. A learned representation for artistic style. ICLR, 2017. 
+https://arxiv.org/pdf/1610.07629.pdf
 
