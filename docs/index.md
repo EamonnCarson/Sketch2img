@@ -87,7 +87,7 @@ Our normalization technique is a bit unconventional. We still center the photos 
 
 ## MRU
 
-![MRU block diagram](./images/mru_diagram.png)
+![MRU block diagram](./images/MRU_block.png)
 
 The MRU (Masked Residual Unit) is the core block of our network. This allows a convolutional network to be repeatedly conditioned on an input image. MRU uses learnable internal masks to extract new features selectively from the input image and combine with the feature maps which are computed in the previous layer. This is similar to attention processes since the MRU can select which regions of the input image to focus on.
 
