@@ -30,6 +30,14 @@ $$
 $$
 
 # Problem Statement and Background
+The motivation of Sketch2Img is to accelerate prototyping and creation of original art assets by creating realistic, photo-quality images from low-effort drawings. The sketches used for training of the network reflect this: they are line drawings that mostly show the outlines of objects rather than the details that we wish to be present in the final images produced. 
+
+Our plan was to assess the quality of our model by inspecting the images it produces on our own--after all, if the goal is to produce images that trick humans into believing they were taken with a camera, a human-centric approach to determine its effectiveness would be best. 
+
+If the images produced by our model could be realistic enough, it could be used by artists looking to save time or effort, and open up whole new avenues of prototyping paths for designers. Imagine being able to go from a new visual idea to an image of what that idea would look like in real life, by simply sketching it out and uploading it to our model. This could enable people to perfect their concepts much quicker, removing the bottleneck of the entire prototyping process. 
+
+Sketch2Img utilizes a generative adversarial network (GAN) in order to generate realistic-looking images from those input sketches. The architecture largely follows [the SketchyGAN paper](https://arxiv.org/pdf/1801.02753.pdf), but we bolster the discriminator by providing it with the input sketches, in addition to the real and fake images. 
+
 # Approach
 ## Dataset
 For our dataset, we needed pairs of sketches to images, since we need the actual images as references for our GAN. While [Google’s Quick, Draw! Dataset](https://github.com/googlecreativelab/quickdraw-dataset) has over 50 million sketches, the players were sketching based on a category, not a reference photo. Therefore, this dataset is unsuitable for us.
@@ -58,6 +66,7 @@ Furthermore, the Sketchy database provides additional info and annotations, whic
 - Ambiguous - The reviewer deemed the sketch too poor quality to identify as the subject object. However, these sketches may still approximate the correct shape and/or pose.
 - Pose - The reviewer deemed the sketch identifiable, but not in a correct pose or perspective.
 - Context - The artist included environmental details that were not part of the subject object, such as 'water ripples' around a duck.
+
 We removed erroneous sketches, since they have no value and would actively hurt the training process of the GAN. However, we decided to keep the other types of "incorrect" sketches, since we don't think they are egregious enough to harm training.
 
 ## Image Processing
@@ -105,9 +114,42 @@ y &= (1-n) \otimes \textrm{Conv}_{f_d}(x) + n \otimes z \\
 \end{align*}
 $$
 
+## GAN
 
+![Overall network architecture](./images/architecture.png)
+*Caption: Overall structure of the network*
 
-# Explanation of Losses
+## Generator
+The generator uses an encoder-decoder structure. Both the encoder and the decoder are built with 4 MRU blocks each followed by either a convolutional layer or a deconvolutional layer. The generator takes an integer class label and a sketch. The label is then embedded (with a learned embedding) to have dimensions of 1x64x64. The sketches are resized to the proper dimensions and fed into every MRU block in the generator.
+
+Also, there are skip-connections between the encoder and decoder blocks. The output feature maps from the MRU of the encoder block are concatenated (along the channel dimension) to the output of the corresponding decoder block after the deconvolutional layer
+
+![Generator encoder block architecture](./images/encoder.png)
+*Caption: architecture of the generator's encoder block*
+
+In the encoder block, the MRU doubles the channel dimensions while keeping the height and width dimensions of the feature maps and the convolutional layer halves the height and width dimensions while keeping the channel dimension.
+
+![Generator decoder block architecture](./images/decoder.png)
+*Caption: architecture of the generator's decoder block*
+
+Note that between the encoder and the decoder, noise is concatenated to the output of the encoder in order to encourage diversity between generated images.
+
+In the decoder block, both the MRU and the deconvolutional layers halve the channel dimensions. The MRU keeps the dimensions of height and width while the deconvolutional layer doubles them. Note that the skip-connections cause the outputs of the corresponding encoder block to be concatenated to the output from the deconvolution layer. Finally, after the last MRU, instead of a deconvolution, a convolutional layer is applied to reduce the channel dimension to 3. Then, element-wise $$\tanh$$ function is applied to convert the range $$[-1, 1]$$.
+
+## Discriminator 
+
+![Discriminator architecture](./images/discriminator.png)
+*Caption: architecture of the discriminator*
+
+The discriminator has the same structure as the encoder from the generator. The discriminator takes one input which is a concatenated image of a real or fake image and a corresponding sketch.
+
+By feeding the concatenated image to the discriminator instead of just the image, the discriminator can use the information from the sketch to figure out the realism of the input image.
+
+The encoder of the generator uses a label as its initial feature maps. However, in the discriminator, it uses the input image as initial feature maps.
+
+The discriminator adds two fully connected layers at the end which take outputs feature maps from the final MRU. The first fully connected layer outputs one logit that is the probability of the input image is real. The second fully connected layer outputs the logits for the classification of the input image.
+
+## Explanation of Losses
 Let $$x$$ be the sketch, $$y$$ be the corresponding real image, $$z$$ be a noise, and $$c$$ be a class label. 
 
 Our first loss function is the generic GAN loss (which is binary cross entropy loss for the discriminator’s classification of images as real or fake):
@@ -122,7 +164,7 @@ $$ L_\textrm{AC}(D) = \Expect{\log P\left(C = c \given y \right)} $$
 
 This loss incentivizes the discriminator to correctly classify the subject of images, the hope being that this loss will incentivize the discriminator to learn important image features sooner. We also propagate this loss to the generator so that it is incentivized to produce images that are recognizably of a certain class. To clarify that we propagate to the generator, we denote this loss $$L_\textrm{AC}(G)$$ when it is applied to the generator.
 
-The third loss function is DRAGAN loss $$L_\textrm{dragan}(D)$$, which is used to avoid mode collapse. For more details see ![the DRAGAN paper](https://arxiv.org/abs/1705.07215). This loss applied to the discriminator as per the DRAGAN paper.
+The third loss function is DRAGAN loss $$L_\textrm{dragan}(D)$$, which is used to avoid mode collapse. For more details see [the DRAGAN paper](https://arxiv.org/abs/1705.07215). This loss applied to the discriminator as per the DRAGAN paper.
 
 The fourth loss function is supervised loss (just a L1 distance between the generated and ground-truth images):
 
@@ -142,7 +184,7 @@ $$ L_\textrm{div} = - \norm{G(x, z_1) - G(x, z_2)_1 } $$
 
 The purpose of this loss is to encourage the generator to have high diversity in its output images (and it does so by rewarding the generator for having a high local rate of change).
 
-Furthermore, to each of these losses we multiply hyperparameters/weights. For our most successful run, we kept all weights at 1 except for the DRAGAN loss, where we used a weight of 10 and an internal hyperparameter $$k = 1$$ (see ![the tensorflow implementation of DRAGAN](https://github.com/kodalinaveen3/DRAGAN) for more details).
+Furthermore, to each of these losses we multiply hyperparameters/weights. For our most successful run, we kept all weights at 1 except for the DRAGAN loss, where we used a weight of 10 and an internal hyperparameter $$k = 1$$ (see [the tensorflow implementation of DRAGAN](https://github.com/kodalinaveen3/DRAGAN) for more details).
 
 All in all the loss for the discriminator is
 
@@ -153,3 +195,9 @@ And the loss for the generator is
 $$ L(G) = L_\textrm{GAN}(G) - L_{AC}(G) + L_\textrm{sup}(G) + L_{p}(G) + L_\textrm{div}(G) $$
 
 Both of these losses should be minimized.
+
+## References
+1. Wengling Chen, James Hays. SketchyGAN: Towards Diverse and Realistic Sketch to Image Synthesis https://arxiv.org/abs/1801.02753
+2. Jacob Abernethy, James Hays, Zsolt Kira. On Convergence and Stability of GANs, https://arxiv.org/abs/1705.07215
+3. T. Salimans, I. Goodfellow, W. Zaremba, V. Cheung, A. Radford, and X. Chen. Improved techniques for training gans. In Advances in Neural Information Processing Systems, pages 2234–2242, 2016.
+
